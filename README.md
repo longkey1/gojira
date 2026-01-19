@@ -1,6 +1,6 @@
 # gojira
 
-JIRA CLI tool written in Go.
+A command-line interface tool for JIRA, written in Go.
 
 ## Installation
 
@@ -18,17 +18,34 @@ Download the binary from [Releases](https://github.com/longkey1/gojira/releases)
 
 Set the following environment variables:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `JIRA_EMAIL` | Yes | Your JIRA account email |
-| `JIRA_API_TOKEN` | Yes | JIRA API token (generate at https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `JIRA_BASE_URL` | No | JIRA base URL (default: `https://your-domain.atlassian.net`) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `JIRA_EMAIL` | Yes | - | Your JIRA account email |
+| `JIRA_API_TOKEN` | Yes | - | JIRA API token |
+| `JIRA_BASE_URL` | No | `https://your-domain.atlassian.net` | JIRA instance base URL |
+
+To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
+
+### Environment Variable Expansion
+
+Environment variable values support `${VAR}` or `$VAR` syntax for referencing other environment variables:
+
+```bash
+# Example: Store credentials separately and reference them
+export MY_JIRA_EMAIL="user@example.com"
+export MY_JIRA_TOKEN="your-api-token"
+
+export JIRA_EMAIL='${MY_JIRA_EMAIL}'
+export JIRA_API_TOKEN='${MY_JIRA_TOKEN}'
+```
+
+This is useful when managing credentials through secret managers or shared configuration files.
 
 ## Commands
 
 ### list
 
-List tickets matching a JQL query.
+List issues matching a JQL query.
 
 ```bash
 # List all issues assigned to you
@@ -43,7 +60,7 @@ gojira list --jql 'project = PROJ AND status != Done'
 
 ### get
 
-Get a single ticket by key.
+Get a single issue by key.
 
 ```bash
 # Get all fields
@@ -55,10 +72,10 @@ gojira get PROJ-1234 --fields 'summary,status,assignee'
 
 ### sum
 
-Sum numeric field values for tickets matching a JQL query.
+Sum numeric field values for issues matching a JQL query.
 
 ```bash
-# Sum a custom numeric field
+# Sum story points
 gojira sum --jql 'project = PROJ AND sprint = 123' --field customfield_12345
 ```
 
@@ -72,17 +89,15 @@ gojira fields
 
 ## Flags
 
-### Common Flags
-
-| Flag | Description |
-|------|-------------|
-| `--jql` | JQL query string |
-| `--fields` | Comma-separated list of fields (default: `*all`) |
-| `--field` | Single field name (for sum command) |
+| Flag | Commands | Description |
+|------|----------|-------------|
+| `--jql` | list, sum | JQL query string |
+| `--fields` | list, get | Comma-separated list of fields (default: `*all`) |
+| `--field` | sum | Single field name to sum |
 
 ## Output
 
-All commands output JSON to stdout, following JIRA API response structure.
+All commands output JSON to stdout, following the JIRA API response structure.
 
 ## License
 
