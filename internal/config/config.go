@@ -5,10 +5,6 @@ import (
 	"os"
 )
 
-const (
-	DefaultBaseURL = "https://your-domain.atlassian.net"
-)
-
 type Config struct {
 	BaseURL  string
 	Email    string
@@ -28,7 +24,7 @@ func Load() (*Config, error) {
 
 	baseURL := getEnvExpanded("JIRA_BASE_URL")
 	if baseURL == "" {
-		baseURL = DefaultBaseURL
+		return nil, errors.New("JIRA_BASE_URL environment variable is required")
 	}
 
 	return &Config{

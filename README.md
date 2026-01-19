@@ -22,7 +22,7 @@ Set the following environment variables:
 |----------|----------|---------|-------------|
 | `JIRA_EMAIL` | Yes | - | Your JIRA account email |
 | `JIRA_API_TOKEN` | Yes | - | JIRA API token |
-| `JIRA_BASE_URL` | No | `https://your-domain.atlassian.net` | JIRA instance base URL |
+| `JIRA_BASE_URL` | Yes | - | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
 
 To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
 
