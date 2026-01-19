@@ -1,7 +1,6 @@
 # Binary
 bin/
 dist/
-gojira
 
 # Go
 *.exe
