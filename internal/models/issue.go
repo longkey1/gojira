@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 )
@@ -55,17 +56,97 @@ type Issue struct {
 }
 
 type Fields struct {
-	Summary     string      `json:"summary"`
-	Description *ADF        `json:"description,omitempty"`
-	Status      *Status     `json:"status,omitempty"`
-	IssueType   *IssueType  `json:"issuetype,omitempty"`
-	Priority    *Priority   `json:"priority,omitempty"`
-	Assignee    *User       `json:"assignee,omitempty"`
-	Reporter    *User       `json:"reporter,omitempty"`
-	Created     *JiraTime   `json:"created,omitempty"`
-	Updated     *JiraTime   `json:"updated,omitempty"`
-	Labels      []string    `json:"labels,omitempty"`
-	Parent      *ParentLink `json:"parent,omitempty"`
+	Summary      string         `json:"summary"`
+	Description  *ADF           `json:"description,omitempty"`
+	Status       *Status        `json:"status,omitempty"`
+	IssueType    *IssueType     `json:"issuetype,omitempty"`
+	Priority     *Priority      `json:"priority,omitempty"`
+	Assignee     *User          `json:"assignee,omitempty"`
+	Reporter     *User          `json:"reporter,omitempty"`
+	Created      *JiraTime      `json:"created,omitempty"`
+	Updated      *JiraTime      `json:"updated,omitempty"`
+	Labels       []string       `json:"labels,omitempty"`
+	Parent       *ParentLink    `json:"parent,omitempty"`
+	CustomFields map[string]any `json:"-"`
+}
+
+// UnmarshalJSON implements custom unmarshaling to capture custom fields
+func (f *Fields) UnmarshalJSON(data []byte) error {
+	// First, unmarshal into a map to get all fields
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	// Define an alias to avoid infinite recursion
+	type FieldsAlias Fields
+	var alias FieldsAlias
+
+	// Unmarshal known fields
+	if err := json.Unmarshal(data, &alias); err != nil {
+		return err
+	}
+
+	// Copy alias to f
+	*f = Fields(alias)
+
+	// Extract custom fields (fields starting with "customfield_")
+	f.CustomFields = make(map[string]any)
+	for key, val := range raw {
+		if strings.HasPrefix(key, "customfield_") {
+			var v any
+			if err := json.Unmarshal(val, &v); err == nil {
+				f.CustomFields[key] = v
+			}
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements custom marshaling to include custom fields
+func (f Fields) MarshalJSON() ([]byte, error) {
+	// Create a map with all the standard fields
+	result := make(map[string]any)
+
+	result["summary"] = f.Summary
+	if f.Description != nil {
+		result["description"] = f.Description
+	}
+	if f.Status != nil {
+		result["status"] = f.Status
+	}
+	if f.IssueType != nil {
+		result["issuetype"] = f.IssueType
+	}
+	if f.Priority != nil {
+		result["priority"] = f.Priority
+	}
+	if f.Assignee != nil {
+		result["assignee"] = f.Assignee
+	}
+	if f.Reporter != nil {
+		result["reporter"] = f.Reporter
+	}
+	if f.Created != nil {
+		result["created"] = f.Created
+	}
+	if f.Updated != nil {
+		result["updated"] = f.Updated
+	}
+	if f.Labels != nil {
+		result["labels"] = f.Labels
+	}
+	if f.Parent != nil {
+		result["parent"] = f.Parent
+	}
+
+	// Add custom fields
+	for key, val := range f.CustomFields {
+		result[key] = val
+	}
+
+	return json.Marshal(result)
 }
 
 type ADF struct {
