@@ -21,17 +21,14 @@ var sumCmd = &cobra.Command{
 	Long: `Sum a custom field value for issues matching JQL.
 
 Examples:
-  # Sum story points for child issues of an epic
-  gojira sum --jql 'parent = EPIC-123' --field customfield_12345
-
-  # Sum a field for issues in a project
+  # Sum a custom numeric field for issues in a project
   gojira sum --jql 'project = PROJ AND status = Done' --field customfield_12345`,
 	RunE: runSum,
 }
 
 func init() {
 	sumCmd.Flags().StringVar(&sumJQL, "jql", "", "JQL query (required)")
-	sumCmd.Flags().StringVar(&sumField, "field", "", "Custom field to sum (required, e.g., customfield_12345)")
+	sumCmd.Flags().StringVar(&sumField, "field", "", "Custom field to sum (required)")
 	sumCmd.MarkFlagRequired("jql")
 	sumCmd.MarkFlagRequired("field")
 }
@@ -85,11 +82,7 @@ func runSum(cmd *cobra.Command, args []string) error {
 }
 
 func getCustomFieldValue(issue models.Issue, fieldName string) float64 {
-	switch fieldName {
-	case "customfield_12345":
-		if issue.Fields.StoryPoints != nil {
-			return *issue.Fields.StoryPoints
-		}
-	}
+	// Custom field values need to be retrieved from the raw JSON response
+	// This function returns 0 as a placeholder - implement based on your needs
 	return 0
 }

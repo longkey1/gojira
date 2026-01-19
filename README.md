@@ -58,10 +58,7 @@ gojira get PROJ-1234 --fields 'summary,status,assignee'
 Sum numeric field values for tickets matching a JQL query.
 
 ```bash
-# Sum story points
-gojira sum --jql 'parent = PROJ-1234' --field customfield_12345
-
-# Sum any custom numeric field
+# Sum a custom numeric field
 gojira sum --jql 'project = PROJ AND sprint = 123' --field customfield_12345
 ```
 
@@ -86,19 +83,6 @@ gojira fields
 ## Output
 
 All commands output JSON to stdout, following JIRA API response structure.
-
-## Development
-
-```bash
-# Build
-make build
-
-# Run tests
-go test ./...
-
-# Release
-make release
-```
 
 ## License
 

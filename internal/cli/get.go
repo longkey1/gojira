@@ -21,7 +21,7 @@ Examples:
   gojira get PROJ-123
 
   # Get specific fields
-  gojira get PROJ-123 --fields 'summary,status,customfield_12345'`,
+  gojira get PROJ-123 --fields 'summary,status,assignee'`,
 	Args: cobra.ExactArgs(1),
 	RunE: runGet,
 }

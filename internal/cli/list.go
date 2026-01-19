@@ -27,7 +27,7 @@ Examples:
   gojira list --jql 'project = PROJ'
 
   # List with specific fields
-  gojira list --jql 'project = PROJ' --fields 'summary,status,customfield_12345'`,
+  gojira list --jql 'project = PROJ' --fields 'summary,status,assignee'`,
 	RunE: runList,
 }
 

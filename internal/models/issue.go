@@ -66,10 +66,6 @@ type Fields struct {
 	Updated     *JiraTime   `json:"updated,omitempty"`
 	Labels      []string    `json:"labels,omitempty"`
 	Parent      *ParentLink `json:"parent,omitempty"`
-
-	// Custom fields
-	StoryPoints *float64 `json:"customfield_12345,omitempty"` // Story Points
-	EpicLink    string   `json:"customfield_10006,omitempty"` // Epic Link
 }
 
 type ADF struct {

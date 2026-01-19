@@ -15,7 +15,7 @@ var fieldsCmd = &cobra.Command{
 	Long: `List available JIRA fields.
 
 This command retrieves all fields available in JIRA, including custom fields.
-Useful for finding custom field IDs like customfield_12345.`,
+Useful for finding custom field IDs.`,
 	RunE: runFields,
 }
 
