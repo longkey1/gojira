@@ -16,17 +16,17 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	email := os.Getenv("JIRA_EMAIL")
+	email := getEnvExpanded("JIRA_EMAIL")
 	if email == "" {
 		return nil, errors.New("JIRA_EMAIL environment variable is required")
 	}
 
-	apiToken := os.Getenv("JIRA_API_TOKEN")
+	apiToken := getEnvExpanded("JIRA_API_TOKEN")
 	if apiToken == "" {
 		return nil, errors.New("JIRA_API_TOKEN environment variable is required")
 	}
 
-	baseURL := os.Getenv("JIRA_BASE_URL")
+	baseURL := getEnvExpanded("JIRA_BASE_URL")
 	if baseURL == "" {
 		baseURL = DefaultBaseURL
 	}
@@ -36,4 +36,11 @@ func Load() (*Config, error) {
 		Email:    email,
 		APIToken: apiToken,
 	}, nil
+}
+
+// getEnvExpanded retrieves an environment variable and expands any ${VAR} or $VAR
+// references within its value.
+func getEnvExpanded(key string) string {
+	value := os.Getenv(key)
+	return os.ExpandEnv(value)
 }
