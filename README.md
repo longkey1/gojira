@@ -70,18 +70,6 @@ gojira get PROJ-1234
 gojira get PROJ-1234 --fields 'summary,status,assignee'
 ```
 
-### sum
-
-Sum numeric field values for issues matching a JQL query. Non-numeric or null values are skipped with a warning.
-
-```bash
-# Sum a single field
-gojira sum --jql 'project = PROJ AND sprint = 123' --fields customfield_12345
-
-# Sum multiple fields
-gojira sum --jql 'project = PROJ' --fields customfield_12345,customfield_67890
-```
-
 ### fields
 
 List all available JIRA fields.
@@ -90,12 +78,30 @@ List all available JIRA fields.
 gojira fields
 ```
 
+### merge
+
+Merge JSON files containing issues from a directory. When duplicate issues are found (same key), the one with the latest updated date is kept.
+
+```bash
+# Merge all JSON files in a directory
+gojira merge --dir ./output
+
+# Merge with specific file pattern
+gojira merge --dir ./output --pattern 'issues-*.json'
+
+# Merge recursively (search subdirectories)
+gojira merge --dir ./output --recursive
+```
+
 ## Flags
 
 | Flag | Commands | Description |
 |------|----------|-------------|
-| `--jql` | list, sum | JQL query string |
-| `--fields` | list, get, sum | Comma-separated list of fields |
+| `--jql` | list | JQL query string |
+| `--fields` | list, get | Comma-separated list of fields |
+| `--dir` | merge | Directory to search for JSON files |
+| `--pattern` | merge | File name pattern (glob, default: *.json) |
+| `--recursive`, `-r` | merge | Search recursively in subdirectories |
 
 ## Output
 

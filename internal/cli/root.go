@@ -17,5 +17,5 @@ func init() {
 	rootCmd.AddCommand(fieldsCmd)
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(sumCmd)
+	rootCmd.AddCommand(mergeCmd)
 }
