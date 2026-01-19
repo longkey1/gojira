@@ -1,0 +1,33 @@
+# Binary
+bin/
+dist/
+gojira
+
+# Go
+*.exe
+*.exe~
+*.test
+*.out
+vendor/
+
+# Environment
+.env
+.envrc
+
+# Cache
+.cache/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
