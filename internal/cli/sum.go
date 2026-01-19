@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/longkey1/gojira/internal/config"
 	"github.com/longkey1/gojira/internal/jira"
@@ -11,34 +12,41 @@ import (
 )
 
 var (
-	sumJQL   string
-	sumField string
+	sumJQL    string
+	sumFields []string
 )
 
 var sumCmd = &cobra.Command{
 	Use:   "sum",
-	Short: "Sum a custom field value for issues matching JQL",
-	Long: `Sum a custom field value for issues matching JQL.
+	Short: "Sum custom field values for issues matching JQL",
+	Long: `Sum custom field values for issues matching JQL.
 
 Examples:
-  # Sum a custom numeric field for issues in a project
-  gojira sum --jql 'project = PROJ AND status = Done' --field customfield_12345`,
+  # Sum a single custom numeric field
+  gojira sum --jql 'project = PROJ AND status = Done' --fields customfield_12345
+
+  # Sum multiple custom numeric fields
+  gojira sum --jql 'project = PROJ' --fields customfield_12345,customfield_67890`,
 	RunE: runSum,
 }
 
 func init() {
 	sumCmd.Flags().StringVar(&sumJQL, "jql", "", "JQL query (required)")
-	sumCmd.Flags().StringVar(&sumField, "field", "", "Custom field to sum (required)")
+	sumCmd.Flags().StringSliceVar(&sumFields, "fields", nil, "Custom fields to sum (comma-separated, required)")
 	sumCmd.MarkFlagRequired("jql")
-	sumCmd.MarkFlagRequired("field")
+	sumCmd.MarkFlagRequired("fields")
+}
+
+type FieldSum struct {
+	Field     string  `json:"field"`
+	TotalSum  float64 `json:"totalSum"`
+	SkipCount int     `json:"skipCount"`
 }
 
 type SumResult struct {
-	JQL        string             `json:"jql"`
-	Field      string             `json:"field"`
-	TotalSum   float64            `json:"totalSum"`
-	ByStatus   map[string]float64 `json:"byStatus"`
-	IssueCount int                `json:"issueCount"`
+	JQL        string     `json:"jql"`
+	FieldSums  []FieldSum `json:"fieldSums"`
+	IssueCount int        `json:"issueCount"`
 }
 
 func runSum(cmd *cobra.Command, args []string) error {
@@ -50,39 +58,61 @@ func runSum(cmd *cobra.Command, args []string) error {
 	client := jira.NewClient(cfg)
 	ctx := context.Background()
 
-	fields := []string{"summary", "status", sumField}
+	// Build fields list: summary and all requested custom fields
+	fields := []string{"summary"}
+	fields = append(fields, sumFields...)
 
 	issues, err := client.SearchJQLAll(ctx, sumJQL, fields)
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)
 	}
 
-	// Calculate sum
+	// Calculate sum for each field
 	result := SumResult{
 		JQL:        sumJQL,
-		Field:      sumField,
-		ByStatus:   make(map[string]float64),
+		FieldSums:  make([]FieldSum, 0, len(sumFields)),
 		IssueCount: len(issues),
 	}
 
-	for _, issue := range issues {
-		value := getCustomFieldValue(issue, sumField)
-		if value != 0 {
-			result.TotalSum += value
-
-			statusName := "Unknown"
-			if issue.Fields.Status != nil {
-				statusName = issue.Fields.Status.Name
-			}
-			result.ByStatus[statusName] += value
+	for _, fieldName := range sumFields {
+		fieldSum := FieldSum{
+			Field: fieldName,
 		}
+
+		for _, issue := range issues {
+			value, ok := getCustomFieldNumericValue(issue, fieldName)
+			if !ok {
+				fieldSum.SkipCount++
+				continue
+			}
+
+			fieldSum.TotalSum += value
+		}
+
+		if fieldSum.SkipCount > 0 {
+			fmt.Fprintf(os.Stderr, "Warning: %d issues skipped for field %s (non-numeric or null values)\n", fieldSum.SkipCount, fieldName)
+		}
+
+		result.FieldSums = append(result.FieldSums, fieldSum)
 	}
 
 	return outputJSON(result)
 }
 
-func getCustomFieldValue(issue models.Issue, fieldName string) float64 {
-	// Custom field values need to be retrieved from the raw JSON response
-	// This function returns 0 as a placeholder - implement based on your needs
-	return 0
+func getCustomFieldNumericValue(issue models.Issue, fieldName string) (float64, bool) {
+	val, exists := issue.Fields.CustomFields[fieldName]
+	if !exists || val == nil {
+		return 0, false
+	}
+
+	switch v := val.(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	default:
+		return 0, false
+	}
 }

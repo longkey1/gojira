@@ -72,11 +72,14 @@ gojira get PROJ-1234 --fields 'summary,status,assignee'
 
 ### sum
 
-Sum numeric field values for issues matching a JQL query.
+Sum numeric field values for issues matching a JQL query. Non-numeric or null values are skipped with a warning.
 
 ```bash
-# Sum story points
-gojira sum --jql 'project = PROJ AND sprint = 123' --field customfield_12345
+# Sum a single field
+gojira sum --jql 'project = PROJ AND sprint = 123' --fields customfield_12345
+
+# Sum multiple fields
+gojira sum --jql 'project = PROJ' --fields customfield_12345,customfield_67890
 ```
 
 ### fields
@@ -92,8 +95,7 @@ gojira fields
 | Flag | Commands | Description |
 |------|----------|-------------|
 | `--jql` | list, sum | JQL query string |
-| `--fields` | list, get | Comma-separated list of fields (default: `*all`) |
-| `--field` | sum | Single field name to sum |
+| `--fields` | list, get, sum | Comma-separated list of fields |
 
 ## Output
 
