@@ -1,0 +1,33 @@
+package cli
+
+import (
+	"fmt"
+
+	"github.com/longkey1/gojira/internal/version"
+	"github.com/spf13/cobra"
+)
+
+// versionCmd represents the version command
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show version information",
+	Long: `Show detailed version information including:
+- Version number
+- Git commit SHA
+- Build time
+- Go version`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Check for short flag
+		short, _ := cmd.Flags().GetBool("short")
+		if short {
+			fmt.Println(version.Short())
+		} else {
+			fmt.Println(version.Info())
+		}
+	},
+}
+
+func init() {
+	// Add short flag for brief version output
+	versionCmd.Flags().BoolP("short", "s", false, "Show only version number")
+}

@@ -12,6 +12,7 @@ vendor/
 # Environment
 .env
 .envrc
+.direnv/
 
 # Cache
 .cache/
@@ -30,3 +31,6 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation
+CLAUDE.md

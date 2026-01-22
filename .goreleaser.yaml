@@ -27,9 +27,9 @@ builds:
         goarch: arm
     ldflags:
       - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
+      - -X github.com/longkey1/gojira/internal/version.Version={{.Version}}
+      - -X github.com/longkey1/gojira/internal/version.CommitSHA={{.Commit}}
+      - -X github.com/longkey1/gojira/internal/version.BuildTime={{.Date}}
 
 archives:
   - format: tar.gz

@@ -18,4 +18,5 @@ func init() {
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(mergeCmd)
+	rootCmd.AddCommand(versionCmd)
 }
