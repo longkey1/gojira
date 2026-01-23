@@ -39,6 +39,14 @@ MAJOR := $(shell echo $(VERSION) | cut -d. -f1 | tr -d 'v')
 MINOR := $(shell echo $(VERSION) | cut -d. -f2)
 PATCH := $(shell echo $(VERSION) | cut -d. -f3)
 
+# Calculate next version based on release type
+define next_version
+$(if $(filter patch,$1),v$(MAJOR).$(MINOR).$(shell expr $(PATCH) + 1),\
+$(if $(filter minor,$1),v$(MAJOR).$(shell expr $(MINOR) + 1).0,\
+$(if $(filter major,$1),v$(shell expr $(MAJOR) + 1).0.0,\
+v$(MAJOR).$(MINOR).$(shell expr $(PATCH) + 1))))
+endef
+
 # Variables for release target
 dryrun ?= true
 type ?=
@@ -92,6 +100,7 @@ release: ## Release target with type argument. Usage: make release type=patch|mi
 .PHONY: re-release
 
 # Variables for re-release target
+dryrun ?= true
 tag ?=
 
 re-release: ## Rerelease target with tag argument. Usage: make re-release tag=<tag> dryrun=false
