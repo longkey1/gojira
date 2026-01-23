@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/longkey1/gojira/internal/cli"
+	"github.com/longkey1/gojira/cmd"
 )
 
 func main() {
-	if err := cli.Execute(); err != nil {
+	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
