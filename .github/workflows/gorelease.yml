@@ -1,21 +1,22 @@
 name: gorelease
 
+run-name: Release ${{ github.ref_name }}
+
 on:
   push:
     tags:
-      - "*"
+      - 'v*'
 
 permissions:
   contents: write
+  packages: write
+  issues: write
+  pull-requests: write
 
 jobs:
   gorelease:
     runs-on: ubuntu-latest
     steps:
-      - name: Set timezone
-        run: |
-          echo "TZ=Asia/Tokyo" >> ${GITHUB_ENV}
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -24,7 +25,7 @@ jobs:
       - name: Fetch all tags
         run: git fetch --force --tags
 
-      - name: Set up Golang
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: stable
