@@ -1,12 +1,8 @@
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
-
 version: 2
 
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
 
 builds:
   - main: ./cmd/gojira
@@ -20,11 +16,11 @@ builds:
       - arm64
       - arm
     goarm:
-      - "6"
-      - "7"
+      - "6"  # For Raspberry Pi 1, 2
+      - "7"  # For Raspberry Pi 3, 4, 5 (32-bit)
     ignore:
       - goos: darwin
-        goarch: arm
+        goarch: 386
     ldflags:
       - -s -w
       - -X github.com/longkey1/gojira/internal/version.Version={{.Version}}
@@ -32,18 +28,22 @@ builds:
       - -X github.com/longkey1/gojira/internal/version.BuildTime={{.Date}}
 
 archives:
-  - format: tar.gz
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "arm" }}armv{{ .Arm }}
       {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - none*
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch

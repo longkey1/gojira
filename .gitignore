@@ -1,12 +1,20 @@
-# Binary
-bin/
-dist/
+# Build outputs
+/bin/
+/dist/
 
-# Go
+# Executables
 *.exe
 *.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
 *.test
-*.out
+
+# Go workspace
+go.work
+go.work.sum
 vendor/
 
 # Environment
@@ -15,22 +23,14 @@ vendor/
 .direnv/
 
 # Cache
-.cache/
-
-# Logs
-logs/
-*.log
+/.cache/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Documentation
-CLAUDE.md
