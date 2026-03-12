@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/longkey1/gojira/internal/jsonutil"
 	"github.com/longkey1/gojira/internal/models"
 )
 
@@ -68,8 +69,15 @@ func (c *Client) SearchJQL(ctx context.Context, jql string, opts SearchOptions, 
 		return nil, fmt.Errorf("search request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	body = jsonutil.SanitizeJSON(body)
+
 	var result searchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("failed to decode search response: %w", err)
 	}
 

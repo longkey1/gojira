@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/longkey1/gojira/internal/jsonutil"
 	"github.com/longkey1/gojira/internal/models"
 	"github.com/spf13/cobra"
 )
@@ -138,6 +139,8 @@ func loadIssuesFromFile(path string) ([]models.Issue, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	data = jsonutil.SanitizeJSON(data)
 
 	var issues []models.Issue
 	if err := json.Unmarshal(data, &issues); err != nil {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/longkey1/gojira/internal/config"
+	"github.com/longkey1/gojira/internal/jsonutil"
 	"github.com/longkey1/gojira/internal/models"
 )
 
@@ -79,8 +80,15 @@ func (c *Client) GetIssue(ctx context.Context, issueKey string, fields []string)
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	body = jsonutil.SanitizeJSON(body)
+
 	var issue models.Issue
-	if err := json.NewDecoder(resp.Body).Decode(&issue); err != nil {
+	if err := json.Unmarshal(body, &issue); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -105,8 +113,15 @@ func (c *Client) GetFields(ctx context.Context) ([]models.Field, error) {
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	body = jsonutil.SanitizeJSON(body)
+
 	var fields []models.Field
-	if err := json.NewDecoder(resp.Body).Decode(&fields); err != nil {
+	if err := json.Unmarshal(body, &fields); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
