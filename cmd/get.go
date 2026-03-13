@@ -21,13 +21,17 @@ Examples:
   gojira get PROJ-123
 
   # Get specific fields
-  gojira get PROJ-123 --fields 'summary,status,assignee'`,
+  gojira get PROJ-123 --fields 'summary,status,assignee'
+
+  # Get with description as Markdown
+  gojira get PROJ-123 --markdown-description`,
 	Args: cobra.ExactArgs(1),
 	RunE: runGet,
 }
 
 func init() {
 	getCmd.Flags().StringVar(&getFields, "fields", "*all", "Fields to retrieve (comma-separated, default: *all)")
+	getCmd.Flags().Bool("markdown-description", false, "Output description as Markdown instead of ADF")
 }
 
 func runGet(cmd *cobra.Command, args []string) error {
@@ -48,5 +52,9 @@ func runGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get issue: %w", err)
 	}
 
+	markdownDesc, _ := cmd.Flags().GetBool("markdown-description")
+	if markdownDesc {
+		return outputJSON(convertDescriptionToMarkdown(issue))
+	}
 	return outputJSON(issue)
 }

@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -89,6 +90,72 @@ func (c *Client) GetIssue(ctx context.Context, issueKey string, fields []string)
 
 	var issue models.Issue
 	if err := json.Unmarshal(body, &issue); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &issue, nil
+}
+
+func (c *Client) UpdateIssue(ctx context.Context, issueKey string, body map[string]any) error {
+	endpoint := fmt.Sprintf("/rest/api/3/issue/%s", issueKey)
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := c.newRequestWithBody("PUT", endpoint, bytes.NewReader(jsonBody))
+	if err != nil {
+		return err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+func (c *Client) CreateIssue(ctx context.Context, body map[string]any) (*models.Issue, error) {
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := c.newRequestWithBody("POST", "/rest/api/3/issue", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	respBody = jsonutil.SanitizeJSON(respBody)
+
+	var issue models.Issue
+	if err := json.Unmarshal(respBody, &issue); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 

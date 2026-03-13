@@ -56,6 +56,9 @@ gojira list --jql 'project = PROJ' --fields 'key,summary,status'
 
 # Filter by status
 gojira list --jql 'project = PROJ AND status != Done'
+
+# List with description as Markdown
+gojira list --jql 'project = PROJ' --markdown-description
 ```
 
 ### get
@@ -68,6 +71,58 @@ gojira get PROJ-1234
 
 # Get specific fields
 gojira get PROJ-1234 --fields 'summary,status,assignee'
+
+# Get with description as Markdown
+gojira get PROJ-1234 --markdown-description
+```
+
+### create
+
+Create a new issue.
+
+```bash
+# Create a task
+gojira create --project PROJ --type Task --summary 'New task'
+
+# Create a bug with priority and labels
+gojira create --project PROJ --type Bug --summary 'Bug report' --priority 'High' --labels 'bug'
+
+# Create with Markdown description
+gojira create --project PROJ --type Story --summary 'Feature' --markdown-description --description '## Background
+See [here](https://example.com) for details'
+
+# Create a subtask
+gojira create --project PROJ --type Sub-task --summary 'Subtask' --parent PROJ-123
+
+# Create from a JSON file
+gojira create --data-file ./new-issue.json
+```
+
+### update
+
+Update an existing issue.
+
+```bash
+# Update summary
+gojira update PROJ-123 --summary 'New title'
+
+# Update description with ADF JSON
+gojira update PROJ-123 --description '{"type":"doc","version":1,"content":[...]}'
+
+# Update description with Markdown
+gojira update PROJ-123 --markdown-description --description '## Overview
+- Item 1
+- Item 2'
+
+# Update multiple fields
+gojira update PROJ-123 --summary 'New title' --priority 'High' --labels 'bug,critical'
+
+# Update with arbitrary JSON data
+gojira update PROJ-123 --data '{"fields":{"customfield_10001":"value"}}'
+
+# Use output from 'gojira get' as base
+gojira get PROJ-123 > issue.json
+gojira update PROJ-123 --data-file ./issue.json --summary 'Updated title'
 ```
 
 ### fields
@@ -99,6 +154,17 @@ gojira merge --dir ./output --recursive
 |------|----------|-------------|
 | `--jql` | list | JQL query string |
 | `--fields` | list, get | Comma-separated list of fields |
+| `--markdown-description` | get, list, create, update | Treat description as Markdown (input: convert to ADF, output: convert from ADF) |
+| `--summary` | create, update | Issue summary |
+| `--description` | create, update | Issue description (ADF JSON by default, Markdown with `--markdown-description`) |
+| `--project` | create | Project key |
+| `--type` | create | Issue type name (e.g., Task, Bug, Story) |
+| `--assignee` | create, update | Assignee account ID |
+| `--labels` | create, update | Labels (comma-separated) |
+| `--priority` | create, update | Priority name |
+| `--parent` | create | Parent issue key (for subtasks) |
+| `--data` | create, update | Arbitrary JSON string for request body |
+| `--data-file` | create, update | Path to JSON file for request body |
 | `--dir` | merge | Directory to search for JSON files |
 | `--pattern` | merge | File name pattern (glob, default: *.json) |
 | `--recursive`, `-r` | merge | Search recursively in subdirectories |
