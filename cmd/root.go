@@ -14,6 +14,7 @@ func Execute() error {
 }
 
 func init() {
+	rootCmd.AddCommand(commentCmd)
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(fieldsCmd)
 	rootCmd.AddCommand(getCmd)

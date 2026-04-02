@@ -55,6 +55,47 @@ func convertDescriptionToMarkdown(data any) any {
 	return data
 }
 
+// convertCommentBodyToMarkdown converts comment body (ADF) to Markdown string.
+// Supports a single comment or a CommentList.
+func convertCommentBodyToMarkdown(data any) any {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return data
+	}
+
+	// Try as a CommentList
+	var list map[string]any
+	if err := json.Unmarshal(b, &list); err == nil {
+		if comments, ok := list["comments"].([]any); ok {
+			for _, c := range comments {
+				if comment, ok := c.(map[string]any); ok {
+					replaceCommentBody(comment)
+				}
+			}
+			return list
+		}
+	}
+
+	// Try as a single comment
+	var single map[string]any
+	if err := json.Unmarshal(b, &single); err == nil {
+		if _, ok := single["body"]; ok {
+			replaceCommentBody(single)
+			return single
+		}
+	}
+
+	return data
+}
+
+func replaceCommentBody(comment map[string]any) {
+	body, ok := comment["body"].(map[string]any)
+	if !ok {
+		return
+	}
+	comment["body"] = adf.ToMarkdown(body)
+}
+
 func replaceDescription(issue map[string]any) {
 	fields, ok := issue["fields"].(map[string]any)
 	if !ok {

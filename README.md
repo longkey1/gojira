@@ -125,6 +125,33 @@ gojira get PROJ-123 > issue.json
 gojira update PROJ-123 --data-file ./issue.json --summary 'Updated title'
 ```
 
+### comment
+
+Manage comments on an issue.
+
+```bash
+# List all comments on an issue
+gojira comment list PROJ-123
+
+# List comments with body as Markdown
+gojira comment list PROJ-123 --markdown-body
+
+# Add a comment (Markdown)
+gojira comment add PROJ-123 --markdown-body --body 'This is a comment'
+
+# Add a comment (ADF JSON)
+gojira comment add PROJ-123 --body '{"type":"doc","version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":"Hello"}]}]}'
+
+# Reply to an existing comment (quotes the original)
+gojira comment add PROJ-123 --markdown-body --body 'I agree' --reply-to 10001
+
+# Update a comment
+gojira comment update PROJ-123 --comment-id 10001 --markdown-body --body 'Updated text'
+
+# Delete a comment
+gojira comment delete PROJ-123 --comment-id 10001
+```
+
 ### fields
 
 List all available JIRA fields.
@@ -165,6 +192,10 @@ gojira merge --dir ./output --recursive
 | `--parent` | create | Parent issue key (for subtasks) |
 | `--data` | create, update | Arbitrary JSON string for request body |
 | `--data-file` | create, update | Path to JSON file for request body |
+| `--body` | comment add, comment update | Comment body (ADF JSON by default, Markdown with `--markdown-body`) |
+| `--markdown-body` | comment list, comment add, comment update | Treat comment body as Markdown (input: convert to ADF, output: convert from ADF) |
+| `--comment-id` | comment update, comment delete | Comment ID |
+| `--reply-to` | comment add | Comment ID to reply to (quotes the original comment) |
 | `--dir` | merge | Directory to search for JSON files |
 | `--pattern` | merge | File name pattern (glob, default: *.json) |
 | `--recursive`, `-r` | merge | Search recursively in subdirectories |
