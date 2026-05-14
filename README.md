@@ -63,11 +63,14 @@ gojira list --jql 'project = PROJ' --markdown-description
 
 ### get
 
-Get a single issue by key.
+Get a single issue by key or browse URL.
 
 ```bash
 # Get all fields
 gojira get PROJ-1234
+
+# Get by browse URL
+gojira get https://your-domain.atlassian.net/browse/PROJ-1234
 
 # Get specific fields
 gojira get PROJ-1234 --fields 'summary,status,assignee'

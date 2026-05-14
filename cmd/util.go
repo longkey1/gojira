@@ -2,11 +2,29 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/longkey1/gojira/internal/adf"
 )
+
+var issueURLPattern = regexp.MustCompile(`/browse/([A-Z][A-Z0-9_]*-\d+)`)
+
+// extractIssueKey accepts either a raw issue key (e.g. "PROJ-123") or a
+// JIRA browse URL (e.g. "https://example.atlassian.net/browse/PROJ-123")
+// and returns the issue key.
+func extractIssueKey(input string) (string, error) {
+	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
+		m := issueURLPattern.FindStringSubmatch(input)
+		if len(m) < 2 {
+			return "", fmt.Errorf("could not extract issue key from URL: %s", input)
+		}
+		return m[1], nil
+	}
+	return input, nil
+}
 
 func parseFields(fieldsStr string) []string {
 	if fieldsStr == "*all" || fieldsStr == "*navigable" {

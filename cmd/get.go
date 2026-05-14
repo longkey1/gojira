@@ -12,13 +12,16 @@ import (
 var getFields string
 
 var getCmd = &cobra.Command{
-	Use:   "get <issue-key>",
-	Short: "Get a single ticket by issue key",
-	Long: `Get a single ticket by issue key.
+	Use:   "get <issue-key-or-url>",
+	Short: "Get a single ticket by issue key or browse URL",
+	Long: `Get a single ticket by issue key or browse URL.
 
 Examples:
   # Get all fields
   gojira get PROJ-123
+
+  # Get by browse URL
+  gojira get https://your-domain.atlassian.net/browse/PROJ-123
 
   # Get specific fields
   gojira get PROJ-123 --fields 'summary,status,assignee'
@@ -35,7 +38,10 @@ func init() {
 }
 
 func runGet(cmd *cobra.Command, args []string) error {
-	issueKey := args[0]
+	issueKey, err := extractIssueKey(args[0])
+	if err != nil {
+		return err
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
