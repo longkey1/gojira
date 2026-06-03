@@ -6,7 +6,7 @@ export PRODUCT_NAME=$(shell cat .product_name 2>/dev/null || echo "unknown")
 .PHONY: build
 build: ## Build the binary to ./bin/
 	@mkdir -p bin
-	go build -o bin/$(PRODUCT_NAME)
+	go build -o bin/$(PRODUCT_NAME) ./cmd/$(PRODUCT_NAME)
 
 .PHONY: test
 test: ## Run tests

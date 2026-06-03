@@ -16,19 +16,35 @@ Download the binary from [Releases](https://github.com/longkey1/gojira/releases)
 
 ## Configuration
 
-Set the following environment variables:
+Credentials can be supplied via a TOML config file, environment variables, or a combination of both. The priority is **environment variables > config file**.
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `JIRA_EMAIL` | Yes | - | Your JIRA account email |
-| `JIRA_API_TOKEN` | Yes | - | JIRA API token |
-| `JIRA_BASE_URL` | Yes | - | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
+| Setting | Env Variable | Config Key | Description |
+|---------|--------------|------------|-------------|
+| Email | `JIRA_EMAIL` | `email` | Your JIRA account email |
+| API Token | `JIRA_API_TOKEN` | `api_token` | JIRA API token |
+| Base URL | `JIRA_BASE_URL` | `base_url` | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
 
 To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
 
+### Config File
+
+A TOML config file is loaded from one of the following locations (first match wins):
+
+1. Path given to `--config <path>`
+2. `$XDG_CONFIG_HOME/gojira/config.toml`
+3. `$HOME/.config/gojira/config.toml`
+
+Example `config.toml`:
+
+```toml
+email = "user@example.com"
+api_token = "your-api-token"
+base_url = "https://your-domain.atlassian.net"
+```
+
 ### Environment Variable Expansion
 
-Environment variable values support `${VAR}` or `$VAR` syntax for referencing other environment variables:
+Values (in either env vars or the config file) support `${VAR}` or `$VAR` syntax for referencing other environment variables:
 
 ```bash
 # Example: Store credentials separately and reference them
@@ -182,6 +198,7 @@ gojira merge --dir ./output --recursive
 
 | Flag | Commands | Description |
 |------|----------|-------------|
+| `--config` | (global) | Path to TOML config file |
 | `--jql` | list | JQL query string |
 | `--fields` | list, get | Comma-separated list of fields |
 | `--markdown-description` | get, list, create, update | Treat description as Markdown (input: convert to ADF, output: convert from ADF) |
