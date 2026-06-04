@@ -24,6 +24,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "Path to TOML config file (default: $XDG_CONFIG_HOME/gojira/config.toml or $HOME/.config/gojira/config.toml)")
 
 	rootCmd.AddCommand(commentCmd)
+	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(fieldsCmd)
 	rootCmd.AddCommand(getCmd)

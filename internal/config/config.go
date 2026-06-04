@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -24,7 +26,17 @@ func SetConfigFile(path string) {
 	configFile = path
 }
 
-func Load() (*Config, error) {
+// keys are the recognized config keys, used by Load and Get.
+var keys = []string{"base_url", "email", "api_token"}
+
+// Keys returns the recognized config keys in a stable order.
+func Keys() []string {
+	return append([]string(nil), keys...)
+}
+
+// newViper builds a viper instance wired to the config file (or default search
+// paths) and the JIRA_* environment variables.
+func newViper() (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigType("toml")
 
@@ -53,6 +65,30 @@ func Load() (*Config, error) {
 	_ = v.BindEnv("email", "JIRA_EMAIL")
 	_ = v.BindEnv("api_token", "JIRA_API_TOKEN")
 	_ = v.BindEnv("base_url", "JIRA_BASE_URL")
+
+	return v, nil
+}
+
+// Get returns the resolved value for a single config key without requiring the
+// other keys to be set. Returns an error for an unknown key.
+func Get(key string) (string, error) {
+	if !slices.Contains(keys, key) {
+		return "", fmt.Errorf("unknown config key %q (valid keys: %s)", key, strings.Join(keys, ", "))
+	}
+
+	v, err := newViper()
+	if err != nil {
+		return "", err
+	}
+
+	return os.ExpandEnv(v.GetString(key)), nil
+}
+
+func Load() (*Config, error) {
+	v, err := newViper()
+	if err != nil {
+		return nil, err
+	}
 
 	email := os.ExpandEnv(v.GetString("email"))
 	if email == "" {

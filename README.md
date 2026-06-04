@@ -194,6 +194,16 @@ gojira merge --dir ./output --pattern 'issues-*.json'
 gojira merge --dir ./output --recursive
 ```
 
+### config
+
+Get a single configuration value resolved from the config file and environment variables. Valid keys: `base_url`, `email`, `api_token`.
+
+```bash
+gojira config get base_url
+gojira config get email
+gojira config get api_token
+```
+
 ## Flags
 
 | Flag | Commands | Description |
