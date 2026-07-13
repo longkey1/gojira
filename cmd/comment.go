@@ -158,9 +158,11 @@ func runCommentAdd(cmd *cobra.Command, args []string) error {
 			}
 
 			var quoted strings.Builder
-			quoted.WriteString(fmt.Sprintf("> **%s** wrote:\n", authorName))
-			for _, line := range strings.Split(originalMarkdown, "\n") {
-				quoted.WriteString("> " + line + "\n")
+			fmt.Fprintf(&quoted, "> **%s** wrote:\n", authorName)
+			for line := range strings.SplitSeq(originalMarkdown, "\n") {
+				quoted.WriteString("> ")
+				quoted.WriteString(line)
+				quoted.WriteString("\n")
 			}
 			quoted.WriteString("\n")
 			quoted.WriteString(bodyStr)

@@ -104,6 +104,4 @@ To add a new command:
 
 ## Testing
 
-Currently, there are no test files in the repository. When adding tests:
-- Place test files alongside source files with `_test.go` suffix
-- Run tests with `make test` or `go test ./...`
+Unit tests live beside the code under test with the `_test.go` suffix (cmd, internal/adf, internal/config, internal/jira, internal/jsonutil, internal/models, internal/version). Tests use only the standard `testing` package, are table-driven with `t.Run` subtests, and never call the live JIRA API (HTTP paths are tested via `httptest.Server`). Run them with `make test` or `go test ./...`.
