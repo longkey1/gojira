@@ -35,7 +35,7 @@ func init() {
 	listCmd.Flags().StringVar(&listJQL, "jql", "", "JQL query (required)")
 	listCmd.Flags().StringVar(&listFields, "fields", "*all", "Fields to retrieve (comma-separated, default: *all)")
 	listCmd.Flags().Bool("markdown-description", false, "Output description as Markdown instead of ADF")
-	listCmd.MarkFlagRequired("jql")
+	_ = listCmd.MarkFlagRequired("jql")
 }
 
 func runList(cmd *cobra.Command, args []string) error {

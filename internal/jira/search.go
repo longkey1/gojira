@@ -62,7 +62,7 @@ func (c *Client) SearchJQL(ctx context.Context, jql string, opts SearchOptions, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute search request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)

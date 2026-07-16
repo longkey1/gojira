@@ -60,6 +60,7 @@ Note: GoReleaser builds use ldflags to inject version information into `internal
 make test           # Run all tests
 make fmt            # Format code with go fmt
 make vet            # Run go vet
+make lint           # Run golangci-lint (version managed by go.mod tool directive)
 make tidy           # Tidy go.mod dependencies
 ```
 
