@@ -14,6 +14,8 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		config.SetConfigFile(configFile)
 	},
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 func Execute() error {
