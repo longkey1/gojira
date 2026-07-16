@@ -5,8 +5,7 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./cmd/gojira
-    env:
+  - env:
       - CGO_ENABLED=0
     goos:
       - linux
