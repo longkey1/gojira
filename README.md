@@ -204,6 +204,18 @@ gojira config get email
 gojira config get api_token
 ```
 
+### version
+
+Show version information (version number, git commit SHA, build time, Go version).
+
+```bash
+# Full version info
+gojira version
+
+# Version number only
+gojira version --short
+```
+
 ## Flags
 
 | Flag | Commands | Description |
@@ -229,6 +241,7 @@ gojira config get api_token
 | `--dir` | merge | Directory to search for JSON files |
 | `--pattern` | merge | File name pattern (glob, default: *.json) |
 | `--recursive`, `-r` | merge | Search recursively in subdirectories |
+| `--short`, `-s` | version | Show only the version number |
 
 ## Output
 
