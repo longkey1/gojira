@@ -19,8 +19,7 @@ cmd/                 - Cobra command definitions (package cmd)
   ├── merge.go       - Merge command
   ├── version.go     - Version command
   └── util.go        - Shared utility functions (parseFields, outputJSON)
-cmd/gojira/          - Main entry point
-  └── main.go        - Application entry point (package main)
+main.go              - Application entry point (package main)
 internal/
   ├── config/        - Config loading via viper (TOML file + env vars) with expansion support
   ├── jira/          - JIRA REST API client and search functionality
@@ -30,10 +29,11 @@ internal/
 
 ### Key Design Patterns
 
-- **CLI Framework**: Uses `spf13/cobra` for command structure. All commands are in `cmd/` package and registered in `cmd/root.go`. The main entry point in `cmd/gojira/main.go` calls `cmd.Execute()`
+- **CLI Framework**: Uses `spf13/cobra` for command structure. All commands are in `cmd/` package and registered in `cmd/root.go`. The main entry point in `main.go` calls `cmd.Execute()`
 - **API Client**: `jira.Client` handles HTTP communication with JIRA API v3, including authentication via Basic Auth (email + API token)
 - **Configuration**: Loaded via `spf13/viper` from a TOML config file and/or environment variables. Priority: env vars > config file. Values support `${VAR}` or `$VAR` expansion.
 - **Output**: All commands output JSON to stdout following JIRA API response structure
+- **Read-only Mode**: `read_only = true` (config file) or `JIRA_READ_ONLY=true` makes write commands (`create`, `update`, `comment add|update|delete`) fail immediately in `PersistentPreRunE`, before any JIRA API call. Write commands are marked with the `write` annotation (`writeAnnotation` in `cmd/root.go`); `isWriteCommand` walks the command's parent chain to check it. Useful when exposing the CLI to an LLM or other automation that should never write
 
 ### Authentication Flow
 

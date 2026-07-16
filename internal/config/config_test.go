@@ -18,6 +18,7 @@ func setupEnv(t *testing.T) {
 	t.Setenv("JIRA_EMAIL", "")
 	t.Setenv("JIRA_API_TOKEN", "")
 	t.Setenv("JIRA_BASE_URL", "")
+	t.Setenv("JIRA_READ_ONLY", "")
 	SetConfigFile("")
 	t.Cleanup(func() { SetConfigFile("") })
 }
@@ -94,6 +95,35 @@ api_token = "${TEST_GOJIRA_TOKEN}"
 				BaseURL:  "https://example.atlassian.net",
 				Email:    "user@example.com",
 				APIToken: "expanded-secret",
+			},
+		},
+		{
+			name: "read_only from config file",
+			configTOML: `base_url = "https://example.atlassian.net"
+email = "user@example.com"
+api_token = "token123"
+read_only = true
+`,
+			want: Config{
+				BaseURL:  "https://example.atlassian.net",
+				Email:    "user@example.com",
+				APIToken: "token123",
+				ReadOnly: true,
+			},
+		},
+		{
+			name: "read_only from environment",
+			env: map[string]string{
+				"JIRA_BASE_URL":  "https://env.atlassian.net",
+				"JIRA_EMAIL":     "env@example.com",
+				"JIRA_API_TOKEN": "envtoken",
+				"JIRA_READ_ONLY": "true",
+			},
+			want: Config{
+				BaseURL:  "https://env.atlassian.net",
+				Email:    "env@example.com",
+				APIToken: "envtoken",
+				ReadOnly: true,
 			},
 		},
 		{
@@ -288,8 +318,63 @@ func TestGet(t *testing.T) {
 	}
 }
 
+func TestReadOnly(t *testing.T) {
+	tests := []struct {
+		name       string
+		configTOML string
+		env        map[string]string
+		want       bool
+	}{
+		{
+			name: "unset defaults to false",
+			want: false,
+		},
+		{
+			name:       "enabled via config file",
+			configTOML: `read_only = true`,
+			want:       true,
+		},
+		{
+			name: "enabled via environment",
+			env:  map[string]string{"JIRA_READ_ONLY": "true"},
+			want: true,
+		},
+		{
+			name:       "environment overrides config file",
+			configTOML: `read_only = true`,
+			env:        map[string]string{"JIRA_READ_ONLY": "false"},
+			want:       false,
+		},
+		{
+			name: "works without connection settings",
+			env:  map[string]string{"JIRA_READ_ONLY": "1"},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupEnv(t)
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+			if tt.configTOML != "" {
+				SetConfigFile(writeConfig(t, tt.configTOML))
+			}
+
+			got, err := ReadOnly()
+			if err != nil {
+				t.Fatalf("ReadOnly() unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("ReadOnly() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestKeys(t *testing.T) {
-	want := []string{"base_url", "email", "api_token"}
+	want := []string{"base_url", "email", "api_token", "read_only"}
 
 	got := Keys()
 	if !slices.Equal(got, want) {

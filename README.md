@@ -23,6 +23,7 @@ Credentials can be supplied via a TOML config file, environment variables, or a 
 | Email | `JIRA_EMAIL` | `email` | Your JIRA account email |
 | API Token | `JIRA_API_TOKEN` | `api_token` | JIRA API token |
 | Base URL | `JIRA_BASE_URL` | `base_url` | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
+| Read Only | `JIRA_READ_ONLY` | `read_only` | Block write commands (`create`/`update`/`comment add\|update\|delete`) |
 
 To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
 
@@ -56,6 +57,18 @@ export JIRA_API_TOKEN='${MY_JIRA_TOKEN}'
 ```
 
 This is useful when managing credentials through secret managers or shared configuration files.
+
+### Read-only Mode
+
+Block write commands (`create`, `update`, `comment add`, `comment update`, `comment delete`) from running, before any JIRA API call is made. Useful when exposing the CLI to an LLM or other automation that should never write:
+
+```bash
+# Environment variable
+export JIRA_READ_ONLY="true"
+
+# Or config file (~/.config/gojira/config.toml)
+read_only = true
+```
 
 ## Commands
 

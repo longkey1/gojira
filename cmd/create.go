@@ -34,7 +34,8 @@ See [here](https://example.com) for details'
 
   # Create from a JSON file
   gojira create --data-file ./new-issue.json`,
-	RunE: runCreate,
+	Annotations: map[string]string{writeAnnotation: "true"},
+	RunE:        runCreate,
 }
 
 func init() {

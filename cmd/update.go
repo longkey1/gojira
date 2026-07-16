@@ -42,8 +42,9 @@ Examples:
   # Use output from 'gojira get' as base
   gojira get PROJ-123 > issue.json
   gojira update PROJ-123 --data-file ./issue.json --summary 'Updated title'`,
-	Args: cobra.ExactArgs(1),
-	RunE: runUpdate,
+	Annotations: map[string]string{writeAnnotation: "true"},
+	Args:        cobra.ExactArgs(1),
+	RunE:        runUpdate,
 }
 
 func init() {

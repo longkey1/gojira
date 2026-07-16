@@ -15,6 +15,7 @@ type Config struct {
 	BaseURL  string
 	Email    string
 	APIToken string
+	ReadOnly bool
 }
 
 // configFile is set by the root command from the --config flag.
@@ -27,7 +28,7 @@ func SetConfigFile(path string) {
 }
 
 // keys are the recognized config keys, used by Load and Get.
-var keys = []string{"base_url", "email", "api_token"}
+var keys = []string{"base_url", "email", "api_token", "read_only"}
 
 // Keys returns the recognized config keys in a stable order.
 func Keys() []string {
@@ -65,6 +66,7 @@ func newViper() (*viper.Viper, error) {
 	_ = v.BindEnv("email", "JIRA_EMAIL")
 	_ = v.BindEnv("api_token", "JIRA_API_TOKEN")
 	_ = v.BindEnv("base_url", "JIRA_BASE_URL")
+	_ = v.BindEnv("read_only", "JIRA_READ_ONLY")
 
 	return v, nil
 }
@@ -109,7 +111,20 @@ func Load() (*Config, error) {
 		BaseURL:  baseURL,
 		Email:    email,
 		APIToken: apiToken,
+		ReadOnly: v.GetBool("read_only"),
 	}, nil
+}
+
+// ReadOnly reports whether read-only mode is enabled (JIRA_READ_ONLY env var
+// or read_only config key). Unlike Load, it does not require the connection
+// settings to be present, so write commands can be rejected before any
+// credential check.
+func ReadOnly() (bool, error) {
+	v, err := newViper()
+	if err != nil {
+		return false, err
+	}
+	return v.GetBool("read_only"), nil
 }
 
 // defaultConfigPaths returns the directories searched for config.toml when no

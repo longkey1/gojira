@@ -46,8 +46,9 @@ Examples:
 
   # Reply to an existing comment (quotes the original)
   gojira comment add PROJ-123 --markdown-body --body 'I agree' --reply-to 10001`,
-	Args: cobra.ExactArgs(1),
-	RunE: runCommentAdd,
+	Annotations: map[string]string{writeAnnotation: "true"},
+	Args:        cobra.ExactArgs(1),
+	RunE:        runCommentAdd,
 }
 
 var commentUpdateCmd = &cobra.Command{
@@ -61,8 +62,9 @@ Examples:
 
   # Update a comment with ADF JSON body
   gojira comment update PROJ-123 --comment-id 10001 --body '{"type":"doc","version":1,"content":[...]}'`,
-	Args: cobra.ExactArgs(1),
-	RunE: runCommentUpdate,
+	Annotations: map[string]string{writeAnnotation: "true"},
+	Args:        cobra.ExactArgs(1),
+	RunE:        runCommentUpdate,
 }
 
 var commentDeleteCmd = &cobra.Command{
@@ -72,8 +74,9 @@ var commentDeleteCmd = &cobra.Command{
 
 Examples:
   gojira comment delete PROJ-123 --comment-id 10001`,
-	Args: cobra.ExactArgs(1),
-	RunE: runCommentDelete,
+	Annotations: map[string]string{writeAnnotation: "true"},
+	Args:        cobra.ExactArgs(1),
+	RunE:        runCommentDelete,
 }
 
 func init() {
