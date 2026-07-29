@@ -33,14 +33,14 @@ internal/
 - **API Client**: `jira.Client` handles HTTP communication with JIRA API v3, including authentication via Basic Auth (email + API token)
 - **Configuration**: Loaded via `spf13/viper` from a TOML config file and/or environment variables. Priority: env vars > config file. Values support `${VAR}` or `$VAR` expansion.
 - **Output**: All commands output JSON to stdout following JIRA API response structure
-- **Read-only Mode**: `read_only = true` (config file) or `JIRA_READ_ONLY=true` makes write commands (`create`, `update`, `comment add|update|delete`) fail immediately in `PersistentPreRunE`, before any JIRA API call. Write commands are marked with the `write` annotation (`writeAnnotation` in `cmd/root.go`); `isWriteCommand` walks the command's parent chain to check it. Useful when exposing the CLI to an LLM or other automation that should never write
+- **Read-only Mode**: `read_only = true` (config file) or `GOJIRA_READ_ONLY=true` makes write commands (`create`, `update`, `comment add|update|delete`) fail immediately in `PersistentPreRunE`, before any JIRA API call. Write commands are marked with the `write` annotation (`writeAnnotation` in `cmd/root.go`); `isWriteCommand` walks the command's parent chain to check it. Useful when exposing the CLI to an LLM or other automation that should never write
 
 ### Authentication Flow
 
 The client uses Basic Authentication with Base64-encoded email and API token. Required settings (env var or config key):
-- `JIRA_EMAIL` / `email` - JIRA account email
-- `JIRA_API_TOKEN` / `api_token` - API token from https://id.atlassian.com/manage-profile/security/api-tokens
-- `JIRA_BASE_URL` / `base_url` - JIRA instance URL (e.g., https://your-domain.atlassian.net)
+- `GOJIRA_JIRA_EMAIL` / `jira_email` - JIRA account email
+- `GOJIRA_JIRA_API_TOKEN` / `jira_api_token` - API token from https://id.atlassian.com/manage-profile/security/api-tokens
+- `GOJIRA_JIRA_BASE_URL` / `jira_base_url` - JIRA instance URL (e.g., https://your-domain.atlassian.net)
 
 Config file is loaded via the `--config` flag, or auto-discovered at `$XDG_CONFIG_HOME/gojira/config.toml` or `$HOME/.config/gojira/config.toml`.
 

@@ -28,7 +28,7 @@ func SetConfigFile(path string) {
 }
 
 // keys are the recognized config keys, used by Load and Get.
-var keys = []string{"base_url", "email", "api_token", "read_only"}
+var keys = []string{"jira_base_url", "jira_email", "jira_api_token", "read_only"}
 
 // Keys returns the recognized config keys in a stable order.
 func Keys() []string {
@@ -36,7 +36,8 @@ func Keys() []string {
 }
 
 // newViper builds a viper instance wired to the config file (or default search
-// paths) and the JIRA_* environment variables.
+// paths) and the GOJIRA_-prefixed environment variables (prefix + config key,
+// e.g. GOJIRA_JIRA_EMAIL for jira_email).
 func newViper() (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigType("toml")
@@ -61,12 +62,8 @@ func newViper() (*viper.Viper, error) {
 		}
 	}
 
-	v.SetEnvPrefix("JIRA")
+	v.SetEnvPrefix("GOJIRA")
 	v.AutomaticEnv()
-	_ = v.BindEnv("email", "JIRA_EMAIL")
-	_ = v.BindEnv("api_token", "JIRA_API_TOKEN")
-	_ = v.BindEnv("base_url", "JIRA_BASE_URL")
-	_ = v.BindEnv("read_only", "JIRA_READ_ONLY")
 
 	return v, nil
 }
@@ -92,19 +89,19 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	email := os.ExpandEnv(v.GetString("email"))
+	email := os.ExpandEnv(v.GetString("jira_email"))
 	if email == "" {
-		return nil, errors.New("JIRA email is required (set JIRA_EMAIL or 'email' in config file)")
+		return nil, errors.New("JIRA email is required (set GOJIRA_JIRA_EMAIL or 'jira_email' in config file)")
 	}
 
-	apiToken := os.ExpandEnv(v.GetString("api_token"))
+	apiToken := os.ExpandEnv(v.GetString("jira_api_token"))
 	if apiToken == "" {
-		return nil, errors.New("JIRA API token is required (set JIRA_API_TOKEN or 'api_token' in config file)")
+		return nil, errors.New("JIRA API token is required (set GOJIRA_JIRA_API_TOKEN or 'jira_api_token' in config file)")
 	}
 
-	baseURL := os.ExpandEnv(v.GetString("base_url"))
+	baseURL := os.ExpandEnv(v.GetString("jira_base_url"))
 	if baseURL == "" {
-		return nil, errors.New("JIRA base URL is required (set JIRA_BASE_URL or 'base_url' in config file)")
+		return nil, errors.New("JIRA base URL is required (set GOJIRA_JIRA_BASE_URL or 'jira_base_url' in config file)")
 	}
 
 	return &Config{
@@ -115,7 +112,7 @@ func Load() (*Config, error) {
 	}, nil
 }
 
-// ReadOnly reports whether read-only mode is enabled (JIRA_READ_ONLY env var
+// ReadOnly reports whether read-only mode is enabled (GOJIRA_READ_ONLY env var
 // or read_only config key). Unlike Load, it does not require the connection
 // settings to be present, so write commands can be rejected before any
 // credential check.

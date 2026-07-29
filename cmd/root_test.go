@@ -98,7 +98,7 @@ func TestWriteCommandAnnotations(t *testing.T) {
 func TestCheckReadOnly(t *testing.T) {
 	tests := []struct {
 		name     string
-		readOnly string // value for JIRA_READ_ONLY, empty to leave unset
+		readOnly string // value for GOJIRA_READ_ONLY, empty to leave unset
 		wantErr  bool
 	}{
 		{name: "read-only disabled", readOnly: "", wantErr: false},
@@ -111,7 +111,7 @@ func TestCheckReadOnly(t *testing.T) {
 			// Isolate from the real environment and any user config file.
 			t.Setenv("HOME", t.TempDir())
 			t.Setenv("XDG_CONFIG_HOME", "")
-			t.Setenv("JIRA_READ_ONLY", tt.readOnly)
+			t.Setenv("GOJIRA_READ_ONLY", tt.readOnly)
 			config.SetConfigFile("")
 			t.Cleanup(func() { config.SetConfigFile("") })
 

@@ -20,10 +20,10 @@ Credentials can be supplied via a TOML config file, environment variables, or a 
 
 | Setting | Env Variable | Config Key | Description |
 |---------|--------------|------------|-------------|
-| Email | `JIRA_EMAIL` | `email` | Your JIRA account email |
-| API Token | `JIRA_API_TOKEN` | `api_token` | JIRA API token |
-| Base URL | `JIRA_BASE_URL` | `base_url` | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
-| Read Only | `JIRA_READ_ONLY` | `read_only` | Block write commands (`create`/`update`/`comment add\|update\|delete`) |
+| Email | `GOJIRA_JIRA_EMAIL` | `jira_email` | Your JIRA account email |
+| API Token | `GOJIRA_JIRA_API_TOKEN` | `jira_api_token` | JIRA API token |
+| Base URL | `GOJIRA_JIRA_BASE_URL` | `jira_base_url` | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
+| Read Only | `GOJIRA_READ_ONLY` | `read_only` | Block write commands (`create`/`update`/`comment add\|update\|delete`) |
 
 To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
 
@@ -38,9 +38,9 @@ A TOML config file is loaded from one of the following locations (first match wi
 Example `config.toml`:
 
 ```toml
-email = "user@example.com"
-api_token = "your-api-token"
-base_url = "https://your-domain.atlassian.net"
+jira_email = "user@example.com"
+jira_api_token = "your-api-token"
+jira_base_url = "https://your-domain.atlassian.net"
 ```
 
 ### Environment Variable Expansion
@@ -52,8 +52,8 @@ Values (in either env vars or the config file) support `${VAR}` or `$VAR` syntax
 export MY_JIRA_EMAIL="user@example.com"
 export MY_JIRA_TOKEN="your-api-token"
 
-export JIRA_EMAIL='${MY_JIRA_EMAIL}'
-export JIRA_API_TOKEN='${MY_JIRA_TOKEN}'
+export GOJIRA_JIRA_EMAIL='${MY_JIRA_EMAIL}'
+export GOJIRA_JIRA_API_TOKEN='${MY_JIRA_TOKEN}'
 ```
 
 This is useful when managing credentials through secret managers or shared configuration files.
@@ -64,7 +64,7 @@ Block write commands (`create`, `update`, `comment add`, `comment update`, `comm
 
 ```bash
 # Environment variable
-export JIRA_READ_ONLY="true"
+export GOJIRA_READ_ONLY="true"
 
 # Or config file (~/.config/gojira/config.toml)
 read_only = true
@@ -209,12 +209,12 @@ gojira merge --dir ./output --recursive
 
 ### config
 
-Get a single configuration value resolved from the config file and environment variables. Valid keys: `base_url`, `email`, `api_token`.
+Get a single configuration value resolved from the config file and environment variables. Valid keys: `jira_base_url`, `jira_email`, `jira_api_token`, `read_only`.
 
 ```bash
-gojira config get base_url
-gojira config get email
-gojira config get api_token
+gojira config get jira_base_url
+gojira config get jira_email
+gojira config get jira_api_token
 ```
 
 ### version

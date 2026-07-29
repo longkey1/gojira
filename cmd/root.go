@@ -45,7 +45,7 @@ func checkReadOnly() error {
 		return err
 	}
 	if readOnly {
-		return fmt.Errorf("read-only mode is enabled (read_only/JIRA_READ_ONLY); write commands are disabled")
+		return fmt.Errorf("read-only mode is enabled (read_only/GOJIRA_READ_ONLY); write commands are disabled")
 	}
 	return nil
 }
