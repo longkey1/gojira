@@ -22,8 +22,8 @@ environment variables.
 Valid keys: %s
 
 Examples:
-  gojira config get base_url
-  gojira config get email`, strings.Join(config.Keys(), ", ")),
+  gojira config get jira_base_url
+  gojira config get jira_email`, strings.Join(config.Keys(), ", ")),
 	Args: cobra.ExactArgs(1),
 	RunE: runConfigGet,
 }

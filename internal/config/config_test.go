@@ -9,16 +9,16 @@ import (
 )
 
 // setupEnv isolates the test from the real environment: HOME points to an
-// empty temp dir, XDG_CONFIG_HOME and the JIRA_* variables are cleared, and
+// empty temp dir, XDG_CONFIG_HOME and the GOJIRA_* variables are cleared, and
 // the package-level configFile is reset before and after the test.
 func setupEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
-	t.Setenv("JIRA_EMAIL", "")
-	t.Setenv("JIRA_API_TOKEN", "")
-	t.Setenv("JIRA_BASE_URL", "")
-	t.Setenv("JIRA_READ_ONLY", "")
+	t.Setenv("GOJIRA_JIRA_EMAIL", "")
+	t.Setenv("GOJIRA_JIRA_API_TOKEN", "")
+	t.Setenv("GOJIRA_JIRA_BASE_URL", "")
+	t.Setenv("GOJIRA_READ_ONLY", "")
 	SetConfigFile("")
 	t.Cleanup(func() { SetConfigFile("") })
 }
@@ -44,9 +44,9 @@ func TestLoad(t *testing.T) {
 	}{
 		{
 			name: "all values from config file",
-			configTOML: `base_url = "https://example.atlassian.net"
-email = "user@example.com"
-api_token = "token123"
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_email = "user@example.com"
+jira_api_token = "token123"
 `,
 			want: Config{
 				BaseURL:  "https://example.atlassian.net",
@@ -57,9 +57,9 @@ api_token = "token123"
 		{
 			name: "all values from environment",
 			env: map[string]string{
-				"JIRA_BASE_URL":  "https://env.atlassian.net",
-				"JIRA_EMAIL":     "env@example.com",
-				"JIRA_API_TOKEN": "envtoken",
+				"GOJIRA_JIRA_BASE_URL":  "https://env.atlassian.net",
+				"GOJIRA_JIRA_EMAIL":     "env@example.com",
+				"GOJIRA_JIRA_API_TOKEN": "envtoken",
 			},
 			want: Config{
 				BaseURL:  "https://env.atlassian.net",
@@ -69,12 +69,12 @@ api_token = "token123"
 		},
 		{
 			name: "environment overrides config file",
-			configTOML: `base_url = "https://file.atlassian.net"
-email = "file@example.com"
-api_token = "filetoken"
+			configTOML: `jira_base_url = "https://file.atlassian.net"
+jira_email = "file@example.com"
+jira_api_token = "filetoken"
 `,
 			env: map[string]string{
-				"JIRA_EMAIL": "env@example.com",
+				"GOJIRA_JIRA_EMAIL": "env@example.com",
 			},
 			want: Config{
 				BaseURL:  "https://file.atlassian.net",
@@ -84,9 +84,9 @@ api_token = "filetoken"
 		},
 		{
 			name: "values are env-expanded",
-			configTOML: `base_url = "https://example.atlassian.net"
-email = "user@example.com"
-api_token = "${TEST_GOJIRA_TOKEN}"
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_email = "user@example.com"
+jira_api_token = "${TEST_GOJIRA_TOKEN}"
 `,
 			env: map[string]string{
 				"TEST_GOJIRA_TOKEN": "expanded-secret",
@@ -99,9 +99,9 @@ api_token = "${TEST_GOJIRA_TOKEN}"
 		},
 		{
 			name: "read_only from config file",
-			configTOML: `base_url = "https://example.atlassian.net"
-email = "user@example.com"
-api_token = "token123"
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_email = "user@example.com"
+jira_api_token = "token123"
 read_only = true
 `,
 			want: Config{
@@ -114,10 +114,10 @@ read_only = true
 		{
 			name: "read_only from environment",
 			env: map[string]string{
-				"JIRA_BASE_URL":  "https://env.atlassian.net",
-				"JIRA_EMAIL":     "env@example.com",
-				"JIRA_API_TOKEN": "envtoken",
-				"JIRA_READ_ONLY": "true",
+				"GOJIRA_JIRA_BASE_URL":  "https://env.atlassian.net",
+				"GOJIRA_JIRA_EMAIL":     "env@example.com",
+				"GOJIRA_JIRA_API_TOKEN": "envtoken",
+				"GOJIRA_READ_ONLY": "true",
 			},
 			want: Config{
 				BaseURL:  "https://env.atlassian.net",
@@ -128,22 +128,22 @@ read_only = true
 		},
 		{
 			name: "missing email",
-			configTOML: `base_url = "https://example.atlassian.net"
-api_token = "token123"
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_api_token = "token123"
 `,
 			wantErr: "email is required",
 		},
 		{
 			name: "missing api token",
-			configTOML: `base_url = "https://example.atlassian.net"
-email = "user@example.com"
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_email = "user@example.com"
 `,
 			wantErr: "API token is required",
 		},
 		{
 			name: "missing base URL",
-			configTOML: `email = "user@example.com"
-api_token = "token123"
+			configTOML: `jira_email = "user@example.com"
+jira_api_token = "token123"
 `,
 			wantErr: "base URL is required",
 		},
@@ -210,7 +210,7 @@ func TestLoadExplicitConfigFileErrors(t *testing.T) {
 			if _, err := Load(); err == nil {
 				t.Fatal("Load() error = nil, want error")
 			}
-			if _, err := Get("email"); err == nil {
+			if _, err := Get("jira_email"); err == nil {
 				t.Fatal("Get() error = nil, want error")
 			}
 		})
@@ -225,9 +225,9 @@ func TestLoadFromDefaultXDGPath(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("failed to create config dir: %v", err)
 	}
-	content := `base_url = "https://xdg.atlassian.net"
-email = "xdg@example.com"
-api_token = "xdgtoken"
+	content := `jira_base_url = "https://xdg.atlassian.net"
+jira_email = "xdg@example.com"
+jira_api_token = "xdgtoken"
 `
 	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(content), 0o600); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
@@ -259,26 +259,26 @@ func TestGet(t *testing.T) {
 	}{
 		{
 			name:       "known key from config file",
-			key:        "base_url",
-			configTOML: `base_url = "https://example.atlassian.net"`,
+			key:        "jira_base_url",
+			configTOML: `jira_base_url = "https://example.atlassian.net"`,
 			want:       "https://example.atlassian.net",
 		},
 		{
 			name: "known key from environment",
-			key:  "email",
-			env:  map[string]string{"JIRA_EMAIL": "env@example.com"},
+			key:  "jira_email",
+			env:  map[string]string{"GOJIRA_JIRA_EMAIL": "env@example.com"},
 			want: "env@example.com",
 		},
 		{
 			name:       "value is env-expanded",
-			key:        "api_token",
-			configTOML: `api_token = "$TEST_GOJIRA_TOKEN"`,
+			key:        "jira_api_token",
+			configTOML: `jira_api_token = "$TEST_GOJIRA_TOKEN"`,
 			env:        map[string]string{"TEST_GOJIRA_TOKEN": "secret"},
 			want:       "secret",
 		},
 		{
 			name: "unset key returns empty string without error",
-			key:  "api_token",
+			key:  "jira_api_token",
 			want: "",
 		},
 		{
@@ -336,19 +336,24 @@ func TestReadOnly(t *testing.T) {
 		},
 		{
 			name: "enabled via environment",
-			env:  map[string]string{"JIRA_READ_ONLY": "true"},
+			env:  map[string]string{"GOJIRA_READ_ONLY": "true"},
 			want: true,
 		},
 		{
 			name:       "environment overrides config file",
 			configTOML: `read_only = true`,
-			env:        map[string]string{"JIRA_READ_ONLY": "false"},
+			env:        map[string]string{"GOJIRA_READ_ONLY": "false"},
 			want:       false,
 		},
 		{
 			name: "works without connection settings",
-			env:  map[string]string{"JIRA_READ_ONLY": "1"},
+			env:  map[string]string{"GOJIRA_READ_ONLY": "1"},
 			want: true,
+		},
+		{
+			name: "legacy JIRA_READ_ONLY is ignored",
+			env:  map[string]string{"JIRA_READ_ONLY": "true"},
+			want: false,
 		},
 	}
 
@@ -374,7 +379,7 @@ func TestReadOnly(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	want := []string{"base_url", "email", "api_token", "read_only"}
+	want := []string{"jira_base_url", "jira_email", "jira_api_token", "read_only"}
 
 	got := Keys()
 	if !slices.Equal(got, want) {
