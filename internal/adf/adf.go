@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-var linkRegex = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+// inlineRegex matches, in order of capture groups: inline code, bold, link(text, url).
+var inlineRegex = regexp.MustCompile("`([^`]+)`|\\*\\*([^*]+)\\*\\*|\\[([^\\]]+)\\]\\(([^)]+)\\)")
 
 // ToMarkdown converts an ADF document to a Markdown string.
 func ToMarkdown(doc map[string]any) string {
@@ -78,9 +79,57 @@ func blockToMarkdown(block map[string]any) string {
 		}
 		return strings.Join(lines, "\n")
 
+	case "codeBlock":
+		lang := ""
+		if attrs, ok := block["attrs"].(map[string]any); ok {
+			lang, _ = attrs["language"].(string)
+		}
+		var sb strings.Builder
+		for _, n := range content {
+			if node, ok := n.(map[string]any); ok {
+				text, _ := node["text"].(string)
+				sb.WriteString(text)
+			}
+		}
+		return "```" + lang + "\n" + sb.String() + "\n```"
+
+	case "table":
+		return tableToMarkdown(content)
+
 	default:
 		return inlinesToMarkdown(content)
 	}
+}
+
+func tableToMarkdown(rows []any) string {
+	var lines []string
+	for i, r := range rows {
+		row, ok := r.(map[string]any)
+		if !ok {
+			continue
+		}
+		cells, _ := row["content"].([]any)
+		texts := make([]string, 0, len(cells))
+		for _, c := range cells {
+			cell, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			// Markdown tables cannot hold line breaks or raw pipes in a cell.
+			text := strings.ReplaceAll(listItemText(cell), "\n", "<br>")
+			text = strings.ReplaceAll(text, "|", `\|`)
+			texts = append(texts, text)
+		}
+		lines = append(lines, "| "+strings.Join(texts, " | ")+" |")
+		if i == 0 {
+			seps := make([]string, len(texts))
+			for j := range seps {
+				seps[j] = "---"
+			}
+			lines = append(lines, "| "+strings.Join(seps, " | ")+" |")
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func listItemText(li map[string]any) string {
@@ -107,51 +156,38 @@ func inlinesToMarkdown(nodes []any) string {
 			continue
 		}
 		text, _ := n["text"].(string)
-		if hasLinkMark(n) {
-			href := getLinkHref(n)
-			sb.WriteString("[" + text + "](" + href + ")")
-		} else {
-			sb.WriteString(text)
-		}
-	}
-	return sb.String()
-}
-
-func hasLinkMark(node map[string]any) bool {
-	marks, ok := node["marks"].([]any)
-	if !ok {
-		return false
-	}
-	for _, m := range marks {
-		mark, ok := m.(map[string]any)
-		if !ok {
-			continue
-		}
-		if mark["type"] == "link" {
-			return true
-		}
-	}
-	return false
-}
-
-func getLinkHref(node map[string]any) string {
-	marks, ok := node["marks"].([]any)
-	if !ok {
-		return ""
-	}
-	for _, m := range marks {
-		mark, ok := m.(map[string]any)
-		if !ok {
-			continue
-		}
-		if mark["type"] == "link" {
-			if attrs, ok := mark["attrs"].(map[string]any); ok {
-				href, _ := attrs["href"].(string)
-				return href
+		marks, _ := n["marks"].([]any)
+		var isCode, isStrong bool
+		href, isLink := "", false
+		for _, m := range marks {
+			mark, ok := m.(map[string]any)
+			if !ok {
+				continue
+			}
+			switch mark["type"] {
+			case "code":
+				isCode = true
+			case "strong":
+				isStrong = true
+			case "link":
+				isLink = true
+				if attrs, ok := mark["attrs"].(map[string]any); ok {
+					href, _ = attrs["href"].(string)
+				}
 			}
 		}
+		if isCode {
+			text = "`" + text + "`"
+		}
+		if isStrong {
+			text = "**" + text + "**"
+		}
+		if isLink {
+			text = "[" + text + "](" + href + ")"
+		}
+		sb.WriteString(text)
 	}
-	return ""
+	return sb.String()
 }
 
 // FromMarkdown converts a Markdown string to an ADF (Atlassian Document Format) document.
@@ -166,6 +202,41 @@ func FromMarkdown(md string) map[string]any {
 		// Skip empty lines
 		if strings.TrimSpace(line) == "" {
 			i++
+			continue
+		}
+
+		// Fenced code block
+		if lang, ok := parseCodeFence(line); ok {
+			i++
+			var codeLines []string
+			for i < len(lines) && !isCodeFenceEnd(lines[i]) {
+				codeLines = append(codeLines, lines[i])
+				i++
+			}
+			i++ // closing fence (or end of input for an unterminated block)
+			block := map[string]any{"type": "codeBlock"}
+			if lang != "" {
+				block["attrs"] = map[string]any{"language": lang}
+			}
+			if code := strings.Join(codeLines, "\n"); code != "" {
+				block["content"] = []any{textNode(code)}
+			}
+			content = append(content, block)
+			continue
+		}
+
+		// Table: header row followed by a separator row
+		if i+1 < len(lines) && isTableRow(line) && isTableSeparator(lines[i+1]) {
+			rows := []any{tableRow(splitTableRow(line), "tableHeader")}
+			i += 2
+			for i < len(lines) && isTableRow(lines[i]) {
+				rows = append(rows, tableRow(splitTableRow(lines[i]), "tableCell"))
+				i++
+			}
+			content = append(content, map[string]any{
+				"type":    "table",
+				"content": rows,
+			})
 			continue
 		}
 
@@ -261,44 +332,117 @@ func FromMarkdown(md string) map[string]any {
 	}
 }
 
-// ParseInline parses inline elements (links) from text and returns ADF inline nodes.
+// ParseInline parses inline elements (inline code, bold, links) from text and returns ADF inline nodes.
 func ParseInline(text string) []any {
 	var nodes []any
 
-	matches := linkRegex.FindAllStringSubmatchIndex(text, -1)
+	matches := inlineRegex.FindAllStringSubmatchIndex(text, -1)
 	if len(matches) == 0 {
 		return []any{textNode(text)}
 	}
 
 	lastEnd := 0
 	for _, match := range matches {
-		// Text before the link
 		if match[0] > lastEnd {
 			nodes = append(nodes, textNode(text[lastEnd:match[0]]))
 		}
-		// Link text and URL
-		linkText := text[match[2]:match[3]]
-		linkURL := text[match[4]:match[5]]
-		nodes = append(nodes, map[string]any{
-			"type": "text",
-			"text": linkText,
-			"marks": []any{
-				map[string]any{
-					"type": "link",
-					"attrs": map[string]any{
-						"href": linkURL,
-					},
-				},
-			},
-		})
+		switch {
+		case match[2] >= 0: // `code`
+			nodes = append(nodes, markedTextNode(text[match[2]:match[3]], map[string]any{"type": "code"}))
+		case match[4] >= 0: // **bold**
+			nodes = append(nodes, markedTextNode(text[match[4]:match[5]], map[string]any{"type": "strong"}))
+		default: // [text](url)
+			nodes = append(nodes, markedTextNode(text[match[6]:match[7]], map[string]any{
+				"type":  "link",
+				"attrs": map[string]any{"href": text[match[8]:match[9]]},
+			}))
+		}
 		lastEnd = match[1]
 	}
-	// Text after the last link
 	if lastEnd < len(text) {
 		nodes = append(nodes, textNode(text[lastEnd:]))
 	}
 
 	return nodes
+}
+
+func markedTextNode(text string, mark map[string]any) map[string]any {
+	return map[string]any{
+		"type":  "text",
+		"text":  text,
+		"marks": []any{mark},
+	}
+}
+
+func parseCodeFence(line string) (string, bool) {
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, "```") {
+		return "", false
+	}
+	return strings.TrimSpace(trimmed[3:]), true
+}
+
+func isCodeFenceEnd(line string) bool {
+	return strings.TrimSpace(line) == "```"
+}
+
+func isTableRow(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return len(trimmed) >= 2 && strings.HasPrefix(trimmed, "|") && strings.HasSuffix(trimmed, "|")
+}
+
+func isTableSeparator(line string) bool {
+	if !isTableRow(line) {
+		return false
+	}
+	for _, cell := range splitTableRow(line) {
+		cell = strings.Trim(cell, ":")
+		if len(cell) == 0 || strings.Trim(cell, "-") != "" {
+			return false
+		}
+	}
+	return true
+}
+
+// splitTableRow splits a Markdown table row into trimmed cells, honoring `\|` escapes.
+func splitTableRow(line string) []string {
+	trimmed := strings.TrimSpace(line)
+	trimmed = strings.TrimSuffix(strings.TrimPrefix(trimmed, "|"), "|")
+
+	var cells []string
+	var sb strings.Builder
+	for i := 0; i < len(trimmed); i++ {
+		switch {
+		case trimmed[i] == '\\' && i+1 < len(trimmed) && trimmed[i+1] == '|':
+			sb.WriteByte('|')
+			i++
+		case trimmed[i] == '|':
+			cells = append(cells, strings.TrimSpace(sb.String()))
+			sb.Reset()
+		default:
+			sb.WriteByte(trimmed[i])
+		}
+	}
+	return append(cells, strings.TrimSpace(sb.String()))
+}
+
+func tableRow(cells []string, cellType string) map[string]any {
+	items := make([]any, 0, len(cells))
+	for _, c := range cells {
+		items = append(items, map[string]any{
+			"type": cellType,
+			"content": []any{
+				map[string]any{
+					"type":    "paragraph",
+					"content": ParseInline(c),
+				},
+			},
+		})
+	}
+	return map[string]any{
+		"type":    "tableRow",
+		"content": items,
+	}
 }
 
 func textNode(text string) map[string]any {

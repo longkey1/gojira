@@ -268,3 +268,120 @@ func TestParseInlineMultipleLinks(t *testing.T) {
 		t.Errorf("expected 'b', got %q", node2["text"])
 	}
 }
+
+func TestParseInlineMarks(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantJSON string
+	}{
+		{
+			"inline code",
+			"use `foo` here",
+			`[{"text":"use ","type":"text"},{"marks":[{"type":"code"}],"text":"foo","type":"text"},{"text":" here","type":"text"}]`,
+		},
+		{
+			"bold",
+			"**No** one",
+			`[{"marks":[{"type":"strong"}],"text":"No","type":"text"},{"text":" one","type":"text"}]`,
+		},
+		{
+			"asterisks inside code are not bold",
+			"`**x**`",
+			`[{"marks":[{"type":"code"}],"text":"**x**","type":"text"}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := toJSON(ParseInline(tt.input)); got != tt.wantJSON {
+				t.Errorf("got  %s\nwant %s", got, tt.wantJSON)
+			}
+		})
+	}
+}
+
+func TestFromMarkdownCodeBlock(t *testing.T) {
+	doc := FromMarkdown("```go\nfunc main() {}\n\nfoo | bar\n```\nafter")
+	content := doc["content"].([]any)
+	if len(content) != 2 {
+		t.Fatalf("expected 2 blocks, got %d: %s", len(content), toJSON(content))
+	}
+	block := content[0].(map[string]any)
+	if block["type"] != "codeBlock" {
+		t.Fatalf("expected codeBlock, got %v", block["type"])
+	}
+	if lang := block["attrs"].(map[string]any)["language"]; lang != "go" {
+		t.Errorf("expected language go, got %v", lang)
+	}
+	text := block["content"].([]any)[0].(map[string]any)["text"]
+	if text != "func main() {}\n\nfoo | bar" {
+		t.Errorf("unexpected code text %q", text)
+	}
+	if content[1].(map[string]any)["type"] != "paragraph" {
+		t.Errorf("expected paragraph after code block, got %v", content[1])
+	}
+}
+
+func TestFromMarkdownTable(t *testing.T) {
+	input := "| No | Cases |\n| --- | :---: |\n| 1 | **bold** and `code` |\n| 2 | a \\| b |"
+	doc := FromMarkdown(input)
+	content := doc["content"].([]any)
+	if len(content) != 1 {
+		t.Fatalf("expected 1 block, got %d: %s", len(content), toJSON(content))
+	}
+	table := content[0].(map[string]any)
+	if table["type"] != "table" {
+		t.Fatalf("expected table, got %v", table["type"])
+	}
+	rows := table["content"].([]any)
+	if len(rows) != 3 {
+		t.Fatalf("expected 3 rows (header + 2), got %d", len(rows))
+	}
+	firstCell := rows[0].(map[string]any)["content"].([]any)[0].(map[string]any)
+	if firstCell["type"] != "tableHeader" {
+		t.Errorf("expected tableHeader, got %v", firstCell["type"])
+	}
+	bodyCell := rows[1].(map[string]any)["content"].([]any)[1].(map[string]any)
+	if bodyCell["type"] != "tableCell" {
+		t.Errorf("expected tableCell, got %v", bodyCell["type"])
+	}
+	inlines := bodyCell["content"].([]any)[0].(map[string]any)["content"].([]any)
+	if len(inlines) != 3 {
+		t.Errorf("expected strong/text/code inlines, got %s", toJSON(inlines))
+	}
+	escaped := rows[2].(map[string]any)["content"].([]any)[1].(map[string]any)
+	text := escaped["content"].([]any)[0].(map[string]any)["content"].([]any)[0].(map[string]any)["text"]
+	if text != "a | b" {
+		t.Errorf("expected escaped pipe to be unescaped, got %q", text)
+	}
+}
+
+func TestFromMarkdownTableRequiresSeparator(t *testing.T) {
+	doc := FromMarkdown("| a | b |\n| c | d |")
+	for _, b := range doc["content"].([]any) {
+		if b.(map[string]any)["type"] == "table" {
+			t.Fatalf("rows without a separator must not become a table: %s", toJSON(doc))
+		}
+	}
+}
+
+func TestMarkdownRoundtripRichBlocks(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"table", "| No | Cases |\n| --- | --- |\n| 1 | **bold** and `code` |\n| 2 | a \\| b |"},
+		{"code block with language", "```go\nfunc main() {}\n```"},
+		{"code block without language", "```\nplain\n```"},
+		{"bold and code", "**No** and `x` with [link](https://example.com)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToMarkdown(FromMarkdown(tt.input)); got != tt.input {
+				t.Errorf("roundtrip mismatch:\nexpected: %q\ngot:      %q", tt.input, got)
+			}
+		})
+	}
+}
