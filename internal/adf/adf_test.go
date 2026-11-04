@@ -385,3 +385,84 @@ func TestMarkdownRoundtripRichBlocks(t *testing.T) {
 		})
 	}
 }
+
+func TestFromMarkdownThematicBreak(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		isRule bool
+	}{
+		{"dashes", "---", true},
+		{"asterisks", "***", true},
+		{"underscores", "___", true},
+		{"long dashes", "-----", true},
+		{"surrounding spaces", "  ---  ", true},
+		{"spaced dashes", "- - -", true},
+		{"spaced asterisks", "* * *", true},
+		{"two dashes", "--", false},
+		{"mixed markers", "-*-", false},
+		{"trailing text", "--- a", false},
+		{"table separator", "| --- |", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := FromMarkdown(tt.input)["content"].([]any)
+			if len(content) != 1 {
+				t.Fatalf("expected 1 block, got %d: %s", len(content), toJSON(content))
+			}
+			isRule := content[0].(map[string]any)["type"] == "rule"
+			if isRule != tt.isRule {
+				t.Errorf("expected rule=%v, got %s", tt.isRule, toJSON(content[0]))
+			}
+		})
+	}
+}
+
+func TestFromMarkdownThematicBreakBetweenParagraphs(t *testing.T) {
+	content := FromMarkdown("before\n---\nafter")["content"].([]any)
+	want := []string{"paragraph", "rule", "paragraph"}
+	if len(content) != len(want) {
+		t.Fatalf("expected %d blocks, got %d: %s", len(want), len(content), toJSON(content))
+	}
+	for i, typ := range want {
+		if got := content[i].(map[string]any)["type"]; got != typ {
+			t.Errorf("block %d: expected %s, got %v", i, typ, got)
+		}
+	}
+	if _, ok := content[1].(map[string]any)["content"]; ok {
+		t.Errorf("rule must not have content: %s", toJSON(content[1]))
+	}
+}
+
+func TestFromMarkdownTableNotBrokenByThematicBreak(t *testing.T) {
+	content := FromMarkdown("| a | b |\n|---|---|\n| 1 | 2 |\n\n---")["content"].([]any)
+	if len(content) != 2 {
+		t.Fatalf("expected table and rule, got %s", toJSON(content))
+	}
+	if content[0].(map[string]any)["type"] != "table" || content[1].(map[string]any)["type"] != "rule" {
+		t.Errorf("expected [table, rule], got %s", toJSON(content))
+	}
+}
+
+func TestToMarkdownRule(t *testing.T) {
+	doc := map[string]any{
+		"type":    "doc",
+		"version": 1,
+		"content": []any{
+			map[string]any{"type": "paragraph", "content": []any{textNode("before")}},
+			map[string]any{"type": "rule"},
+			map[string]any{"type": "paragraph", "content": []any{textNode("after")}},
+		},
+	}
+	if got := ToMarkdown(doc); got != "before\n---\nafter" {
+		t.Errorf("unexpected markdown %q", got)
+	}
+}
+
+func TestMarkdownRoundtripThematicBreak(t *testing.T) {
+	input := "# Title\n---\n- item"
+	if got := ToMarkdown(FromMarkdown(input)); got != input {
+		t.Errorf("roundtrip mismatch:\nexpected: %q\ngot:      %q", input, got)
+	}
+}

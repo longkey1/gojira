@@ -96,6 +96,9 @@ func blockToMarkdown(block map[string]any) string {
 	case "table":
 		return tableToMarkdown(content)
 
+	case "rule":
+		return "---"
+
 	default:
 		return inlinesToMarkdown(content)
 	}
@@ -237,6 +240,13 @@ func FromMarkdown(md string) map[string]any {
 				"type":    "table",
 				"content": rows,
 			})
+			continue
+		}
+
+		// Thematic break. Checked before lists so "- - -" / "* * *" are not parsed as list items.
+		if isThematicBreak(line) {
+			content = append(content, map[string]any{"type": "rule"})
+			i++
 			continue
 		}
 
@@ -450,6 +460,30 @@ func textNode(text string) map[string]any {
 		"type": "text",
 		"text": text,
 	}
+}
+
+// isThematicBreak reports whether line is three or more of the same '-', '*' or '_',
+// optionally separated by spaces or tabs.
+func isThematicBreak(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return false
+	}
+	marker := trimmed[0]
+	if marker != '-' && marker != '*' && marker != '_' {
+		return false
+	}
+	count := 0
+	for i := 0; i < len(trimmed); i++ {
+		switch trimmed[i] {
+		case marker:
+			count++
+		case ' ', '\t':
+		default:
+			return false
+		}
+	}
+	return count >= 3
 }
 
 func parseHeading(line string) (int, string, bool) {
