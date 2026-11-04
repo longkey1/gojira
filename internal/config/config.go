@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -16,6 +17,8 @@ type Config struct {
 	Email    string
 	APIToken string
 	ReadOnly bool
+	// DefaultBoard is the board ID used when a command's --board flag is omitted (0 = unset).
+	DefaultBoard int
 }
 
 // configFile is set by the root command from the --config flag.
@@ -28,7 +31,7 @@ func SetConfigFile(path string) {
 }
 
 // keys are the recognized config keys, used by Load and Get.
-var keys = []string{"jira_base_url", "jira_email", "jira_api_token", "read_only"}
+var keys = []string{"jira_base_url", "jira_email", "jira_api_token", "read_only", "default_board"}
 
 // Keys returns the recognized config keys in a stable order.
 func Keys() []string {
@@ -104,12 +107,29 @@ func Load() (*Config, error) {
 		return nil, errors.New("JIRA base URL is required (set GOJIRA_JIRA_BASE_URL or 'jira_base_url' in config file)")
 	}
 
+	defaultBoard, err := parseDefaultBoard(os.ExpandEnv(v.GetString("default_board")))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
-		BaseURL:  baseURL,
-		Email:    email,
-		APIToken: apiToken,
-		ReadOnly: v.GetBool("read_only"),
+		BaseURL:      baseURL,
+		Email:        email,
+		APIToken:     apiToken,
+		ReadOnly:     v.GetBool("read_only"),
+		DefaultBoard: defaultBoard,
 	}, nil
+}
+
+func parseDefaultBoard(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+	id, err := strconv.Atoi(s)
+	if err != nil || id <= 0 {
+		return 0, fmt.Errorf("invalid default board %q (GOJIRA_DEFAULT_BOARD or 'default_board' must be a positive integer)", s)
+	}
+	return id, nil
 }
 
 // ReadOnly reports whether read-only mode is enabled (GOJIRA_READ_ONLY env var

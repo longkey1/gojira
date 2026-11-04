@@ -24,6 +24,7 @@ Credentials can be supplied via a TOML config file, environment variables, or a 
 | API Token | `GOJIRA_JIRA_API_TOKEN` | `jira_api_token` | JIRA API token |
 | Base URL | `GOJIRA_JIRA_BASE_URL` | `jira_base_url` | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
 | Read Only | `GOJIRA_READ_ONLY` | `read_only` | Block write commands (`create`/`update`/`comment add\|update\|delete`) |
+| Default Board | `GOJIRA_DEFAULT_BOARD` | `default_board` | Board ID used by `sprint list` when `--board` is omitted |
 
 To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
 
@@ -184,6 +185,21 @@ gojira comment update PROJ-123 --comment-id 10001 --markdown-body --body 'Update
 gojira comment delete PROJ-123 --comment-id 10001
 ```
 
+### sprint
+
+List sprints of a board via the Jira Agile API (`/rest/agile/1.0/board/{boardId}/sprint`). All pages are fetched.
+
+```bash
+# List all sprints of a board
+gojira sprint list --board 7417
+
+# List only active and closed sprints
+gojira sprint list --board 7417 --state active,closed
+
+# Use the default board (GOJIRA_DEFAULT_BOARD or default_board in config file)
+gojira sprint list --state active
+```
+
 ### fields
 
 List all available JIRA fields.
@@ -251,6 +267,8 @@ gojira version --short
 | `--markdown-body` | comment list, comment add, comment update | Treat comment body as Markdown (input: convert to ADF, output: convert from ADF) |
 | `--comment-id` | comment update, comment delete | Comment ID |
 | `--reply-to` | comment add | Comment ID to reply to (quotes the original comment) |
+| `--board` | sprint list | Board ID (default: `GOJIRA_DEFAULT_BOARD` / `default_board`) |
+| `--state` | sprint list | Sprint states (comma-separated: `future`, `active`, `closed`; default: all) |
 | `--dir` | merge | Directory to search for JSON files |
 | `--pattern` | merge | File name pattern (glob, default: *.json) |
 | `--recursive`, `-r` | merge | Search recursively in subdirectories |
