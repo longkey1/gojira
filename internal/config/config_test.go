@@ -19,6 +19,7 @@ func setupEnv(t *testing.T) {
 	t.Setenv("GOJIRA_JIRA_API_TOKEN", "")
 	t.Setenv("GOJIRA_JIRA_BASE_URL", "")
 	t.Setenv("GOJIRA_READ_ONLY", "")
+	t.Setenv("GOJIRA_DEFAULT_BOARD", "")
 	SetConfigFile("")
 	t.Cleanup(func() { SetConfigFile("") })
 }
@@ -117,7 +118,7 @@ read_only = true
 				"GOJIRA_JIRA_BASE_URL":  "https://env.atlassian.net",
 				"GOJIRA_JIRA_EMAIL":     "env@example.com",
 				"GOJIRA_JIRA_API_TOKEN": "envtoken",
-				"GOJIRA_READ_ONLY": "true",
+				"GOJIRA_READ_ONLY":      "true",
 			},
 			want: Config{
 				BaseURL:  "https://env.atlassian.net",
@@ -125,6 +126,47 @@ read_only = true
 				APIToken: "envtoken",
 				ReadOnly: true,
 			},
+		},
+		{
+			name: "default_board from config file",
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_email = "user@example.com"
+jira_api_token = "token123"
+default_board = 7417
+`,
+			want: Config{
+				BaseURL:      "https://example.atlassian.net",
+				Email:        "user@example.com",
+				APIToken:     "token123",
+				DefaultBoard: 7417,
+			},
+		},
+		{
+			name: "default_board from environment overrides config file",
+			configTOML: `jira_base_url = "https://example.atlassian.net"
+jira_email = "user@example.com"
+jira_api_token = "token123"
+default_board = 7417
+`,
+			env: map[string]string{
+				"GOJIRA_DEFAULT_BOARD": "100",
+			},
+			want: Config{
+				BaseURL:      "https://example.atlassian.net",
+				Email:        "user@example.com",
+				APIToken:     "token123",
+				DefaultBoard: 100,
+			},
+		},
+		{
+			name: "invalid default_board",
+			env: map[string]string{
+				"GOJIRA_JIRA_BASE_URL":  "https://env.atlassian.net",
+				"GOJIRA_JIRA_EMAIL":     "env@example.com",
+				"GOJIRA_JIRA_API_TOKEN": "envtoken",
+				"GOJIRA_DEFAULT_BOARD":  "TxCo",
+			},
+			wantErr: "invalid default board",
 		},
 		{
 			name: "missing email",
@@ -379,7 +421,7 @@ func TestReadOnly(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	want := []string{"jira_base_url", "jira_email", "jira_api_token", "read_only"}
+	want := []string{"jira_base_url", "jira_email", "jira_api_token", "read_only", "default_board"}
 
 	got := Keys()
 	if !slices.Equal(got, want) {

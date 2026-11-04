@@ -67,6 +67,7 @@ func TestWriteCommandAnnotations(t *testing.T) {
 		{path: []string{"list"}, want: false},
 		{path: []string{"fields"}, want: false},
 		{path: []string{"merge"}, want: false},
+		{path: []string{"sprint", "list"}, want: false},
 		{path: []string{"config"}, want: false},
 		{path: []string{"version"}, want: false},
 	}

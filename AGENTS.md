@@ -17,6 +17,7 @@ cmd/                 - Cobra command definitions (package cmd)
   ├── get.go         - Get command
   ├── fields.go      - Fields command
   ├── merge.go       - Merge command
+  ├── sprint.go      - Sprint command (Agile API board sprints)
   ├── version.go     - Version command
   └── util.go        - Shared utility functions (parseFields, outputJSON)
 main.go              - Application entry point (package main)
@@ -97,7 +98,7 @@ To add a new command:
 
 ## Working with JIRA API
 
-- API endpoints use `/rest/api/3/` prefix
+- API endpoints use `/rest/api/3/` prefix, except sprint listing which uses the Agile API (`/rest/agile/1.0/`, `internal/jira/sprint.go`)
 - Client automatically adds authentication headers and content-type
 - Field filtering is supported via query parameters
 - JQL (JIRA Query Language) is used for issue searches in the `list` command
