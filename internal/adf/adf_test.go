@@ -2,6 +2,7 @@ package adf
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -464,5 +465,134 @@ func TestMarkdownRoundtripThematicBreak(t *testing.T) {
 	input := "# Title\n---\n- item"
 	if got := ToMarkdown(FromMarkdown(input)); got != input {
 		t.Errorf("roundtrip mismatch:\nexpected: %q\ngot:      %q", input, got)
+	}
+}
+
+// listShape renders the list structure of an ADF block as a compact string such as
+// "bullet[a,b{ordered[c]}]" so nesting can be compared without walking maps in each test.
+func listShape(block map[string]any) string {
+	kind := "bullet"
+	if block["type"] == "orderedList" {
+		kind = "ordered"
+	}
+	var items []string
+	for _, it := range block["content"].([]any) {
+		li := it.(map[string]any)
+		s := ""
+		for _, c := range li["content"].([]any) {
+			child := c.(map[string]any)
+			switch child["type"] {
+			case "paragraph":
+				s += child["content"].([]any)[0].(map[string]any)["text"].(string)
+			case "bulletList", "orderedList":
+				s += "{" + listShape(child) + "}"
+			}
+		}
+		items = append(items, s)
+	}
+	return kind + "[" + strings.Join(items, ",") + "]"
+}
+
+func TestFromMarkdownNestedList(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "two spaces",
+			input: "- a\n  - b\n  - c\n- d",
+			want:  []string{"bullet[a{bullet[b,c]},d]"},
+		},
+		{
+			name:  "four spaces",
+			input: "- a\n    - b\n- c",
+			want:  []string{"bullet[a{bullet[b]},c]"},
+		},
+		{
+			name:  "tab",
+			input: "- a\n\t- b\n- c",
+			want:  []string{"bullet[a{bullet[b]},c]"},
+		},
+		{
+			name:  "three levels",
+			input: "- a\n  - b\n    - c\n  - d\n- e",
+			want:  []string{"bullet[a{bullet[b{bullet[c]},d]},e]"},
+		},
+		{
+			name:  "ordered inside bullet",
+			input: "- a\n  1. b\n  2. c\n- d",
+			want:  []string{"bullet[a{ordered[b,c]},d]"},
+		},
+		{
+			name:  "bullet inside ordered with two spaces",
+			input: "1. a\n  - b\n2. c",
+			want:  []string{"ordered[a{bullet[b]},c]"},
+		},
+		{
+			name:  "bullet inside ordered with marker width",
+			input: "1. a\n   - b\n   - c\n2. d",
+			want:  []string{"ordered[a{bullet[b,c]},d]"},
+		},
+		{
+			name:  "back to parent after three levels",
+			input: "1. a\n   - b\n     1. c\n2. d",
+			want:  []string{"ordered[a{bullet[b{ordered[c]}]},d]"},
+		},
+		{
+			name:  "same-level type switch starts a new list",
+			input: "- a\n1. b",
+			want:  []string{"bullet[a]", "ordered[b]"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := FromMarkdown(tt.input)["content"].([]any)
+			var got []string
+			for _, b := range content {
+				got = append(got, listShape(b.(map[string]any)))
+			}
+			if strings.Join(got, " ") != strings.Join(tt.want, " ") {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToMarkdownNestedList(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "three levels",
+			input: "- a\n  - b\n    - c\n  - d\n- e",
+			want:  "- a\n  - b\n    - c\n  - d\n- e",
+		},
+		{
+			name:  "mixed types are indented by marker width",
+			input: "1. a\n  - b\n    1. c\n2. d",
+			want:  "1. a\n   - b\n     1. c\n2. d",
+		},
+		{
+			name:  "tab input is normalized to spaces",
+			input: "- a\n\t1. b\n- c",
+			want:  "- a\n  1. b\n- c",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ToMarkdown(FromMarkdown(tt.input))
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+			// The rendered Markdown must parse back to the same structure.
+			if again := ToMarkdown(FromMarkdown(got)); again != got {
+				t.Errorf("not stable: %q -> %q", got, again)
+			}
+		})
 	}
 }

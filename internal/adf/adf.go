@@ -46,27 +46,8 @@ func blockToMarkdown(block map[string]any) string {
 	case "paragraph":
 		return inlinesToMarkdown(content)
 
-	case "bulletList":
-		var lines []string
-		for _, item := range content {
-			li, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			lines = append(lines, "- "+listItemText(li))
-		}
-		return strings.Join(lines, "\n")
-
-	case "orderedList":
-		var lines []string
-		for i, item := range content {
-			li, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			lines = append(lines, fmt.Sprintf("%d. %s", i+1, listItemText(li)))
-		}
-		return strings.Join(lines, "\n")
+	case "bulletList", "orderedList":
+		return listToMarkdown(blockType == "orderedList", content)
 
 	case "blockquote":
 		var lines []string
@@ -130,6 +111,39 @@ func tableToMarkdown(rows []any) string {
 				seps[j] = "---"
 			}
 			lines = append(lines, "| "+strings.Join(seps, " | ")+" |")
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// listToMarkdown renders list items; every block after an item's first is indented by the marker width
+// so that nested lists stay inside their parent item when parsed back.
+func listToMarkdown(ordered bool, items []any) string {
+	var lines []string
+	n := 0
+	for _, item := range items {
+		li, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		n++
+		marker := "- "
+		if ordered {
+			marker = fmt.Sprintf("%d. ", n)
+		}
+		pad := strings.Repeat(" ", len(marker))
+
+		children, _ := li["content"].([]any)
+		var parts []string
+		for _, child := range children {
+			if c, ok := child.(map[string]any); ok {
+				parts = append(parts, blockToMarkdown(c))
+			}
+		}
+		itemLines := strings.Split(strings.Join(parts, "\n"), "\n")
+		lines = append(lines, marker+itemLines[0])
+		for _, l := range itemLines[1:] {
+			lines = append(lines, pad+l)
 		}
 	}
 	return strings.Join(lines, "\n")
@@ -263,41 +277,11 @@ func FromMarkdown(md string) map[string]any {
 			continue
 		}
 
-		// Bullet list
-		if text, ok := parseBulletItem(line); ok {
-			items := []any{bulletListItem(text)}
-			i++
-			for i < len(lines) {
-				if t, ok := parseBulletItem(lines[i]); ok {
-					items = append(items, bulletListItem(t))
-					i++
-				} else {
-					break
-				}
-			}
-			content = append(content, map[string]any{
-				"type":    "bulletList",
-				"content": items,
-			})
-			continue
-		}
-
-		// Ordered list
-		if text, ok := parseOrderedItem(line); ok {
-			items := []any{orderedListItem(text)}
-			i++
-			for i < len(lines) {
-				if t, ok := parseOrderedItem(lines[i]); ok {
-					items = append(items, orderedListItem(t))
-					i++
-				} else {
-					break
-				}
-			}
-			content = append(content, map[string]any{
-				"type":    "orderedList",
-				"content": items,
-			})
+		// Bullet or ordered list, possibly nested
+		if _, ok := parseListItem(line); ok {
+			var list map[string]any
+			list, i = parseList(lines, i)
+			content = append(content, list)
 			continue
 		}
 
@@ -498,29 +482,76 @@ func parseHeading(line string) (int, string, bool) {
 	return level, strings.TrimSpace(trimmed[level+1:]), true
 }
 
-func parseBulletItem(line string) (string, bool) {
-	trimmed := strings.TrimLeft(line, " \t")
-	if strings.HasPrefix(trimmed, "- ") {
-		return strings.TrimSpace(trimmed[2:]), true
-	}
-	if strings.HasPrefix(trimmed, "* ") {
-		return strings.TrimSpace(trimmed[2:]), true
-	}
-	return "", false
+type listItemLine struct {
+	indent  int // leading whitespace width in columns, tabs expanded to the next multiple of 4
+	ordered bool
+	text    string
 }
 
-func parseOrderedItem(line string) (string, bool) {
-	trimmed := strings.TrimLeft(line, " \t")
-	for i, c := range trimmed {
+func parseListItem(line string) (listItemLine, bool) {
+	indent, pos := 0, 0
+	for pos < len(line) && (line[pos] == ' ' || line[pos] == '\t') {
+		if line[pos] == '\t' {
+			indent += 4 - indent%4
+		} else {
+			indent++
+		}
+		pos++
+	}
+	rest := line[pos:]
+
+	if strings.HasPrefix(rest, "- ") || strings.HasPrefix(rest, "* ") {
+		return listItemLine{indent: indent, text: strings.TrimSpace(rest[2:])}, true
+	}
+	for j, c := range rest {
 		if c >= '0' && c <= '9' {
 			continue
 		}
-		if c == '.' && i > 0 && i+1 < len(trimmed) && trimmed[i+1] == ' ' {
-			return strings.TrimSpace(trimmed[i+2:]), true
+		if c == '.' && j > 0 && j+1 < len(rest) && rest[j+1] == ' ' {
+			return listItemLine{indent: indent, ordered: true, text: strings.TrimSpace(rest[j+2:])}, true
 		}
 		break
 	}
-	return "", false
+	return listItemLine{}, false
+}
+
+// parseList parses a list starting at lines[i] and returns it with the index of the first unconsumed line.
+// Items indented deeper than the list's own items form a child list of the preceding item; any deeper
+// indent is accepted (not only the parent's marker width) so that 2-space children under "1." still nest.
+// The list ends at a non-item line, a shallower item, or a same-level item of the other list type.
+func parseList(lines []string, i int) (map[string]any, int) {
+	first, _ := parseListItem(lines[i])
+	items := []any{}
+	for i < len(lines) {
+		if isThematicBreak(lines[i]) {
+			break
+		}
+		item, ok := parseListItem(lines[i])
+		if !ok || item.indent < first.indent {
+			break
+		}
+		if item.indent > first.indent {
+			var child map[string]any
+			child, i = parseList(lines, i)
+			last := items[len(items)-1].(map[string]any)
+			last["content"] = append(last["content"].([]any), child)
+			continue
+		}
+		if item.ordered != first.ordered {
+			break
+		}
+		items = append(items, listItem(item.text))
+		i++
+	}
+
+	listType := "bulletList"
+	if first.ordered {
+		listType = "orderedList"
+	}
+	return map[string]any{
+		"type":    listType,
+		"content": items,
+	}, i
 }
 
 func parseBlockquote(line string) (string, bool) {
@@ -534,19 +565,7 @@ func parseBlockquote(line string) (string, bool) {
 	return "", false
 }
 
-func bulletListItem(text string) map[string]any {
-	return map[string]any{
-		"type": "listItem",
-		"content": []any{
-			map[string]any{
-				"type":    "paragraph",
-				"content": ParseInline(text),
-			},
-		},
-	}
-}
-
-func orderedListItem(text string) map[string]any {
+func listItem(text string) map[string]any {
 	return map[string]any{
 		"type": "listItem",
 		"content": []any{
