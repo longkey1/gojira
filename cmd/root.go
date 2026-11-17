@@ -11,7 +11,7 @@ import (
 var configFile string
 
 // writeAnnotation marks a command as mutating JIRA state
-// (see create.go, update.go, comment.go).
+// (see create.go, update.go, comment.go, link.go).
 const writeAnnotation = "write"
 
 var rootCmd = &cobra.Command{
@@ -62,6 +62,7 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(fieldsCmd)
 	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(linkCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(mergeCmd)
 	rootCmd.AddCommand(sprintCmd)

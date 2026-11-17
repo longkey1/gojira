@@ -367,3 +367,112 @@ func (c *Client) GetFields(ctx context.Context) ([]models.Field, error) {
 
 	return fields, nil
 }
+
+// CreateIssueLink creates a link of the given type. Jira reads it as
+// "<inwardKey> <type.outward> <outwardKey>", e.g. for "Blocks" the inward issue blocks the outward issue.
+func (c *Client) CreateIssueLink(ctx context.Context, typeName, inwardKey, outwardKey string) error {
+	jsonBody, err := json.Marshal(map[string]any{
+		"type":         map[string]string{"name": typeName},
+		"inwardIssue":  map[string]string{"key": inwardKey},
+		"outwardIssue": map[string]string{"key": outwardKey},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := c.newRequestWithBody("POST", "/rest/api/3/issueLink", bytes.NewReader(jsonBody))
+	if err != nil {
+		return err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+func (c *Client) ListIssueLinkTypes(ctx context.Context) ([]models.IssueLinkType, error) {
+	req, err := c.newRequest("GET", "/rest/api/3/issueLinkType")
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	body = jsonutil.SanitizeJSON(body)
+
+	var list models.IssueLinkTypeList
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return list.IssueLinkTypes, nil
+}
+
+// GetIssueLinks returns fields.issuelinks of an issue. It does not go through
+// GetIssue because models.Fields drops non-custom fields it does not know.
+func (c *Client) GetIssueLinks(ctx context.Context, issueKey string) ([]models.IssueLink, error) {
+	endpoint := fmt.Sprintf("/rest/api/3/issue/%s?fields=issuelinks", issueKey)
+
+	req, err := c.newRequest("GET", endpoint)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	body = jsonutil.SanitizeJSON(body)
+
+	var issue struct {
+		Fields struct {
+			IssueLinks []models.IssueLink `json:"issuelinks"`
+		} `json:"fields"`
+	}
+	if err := json.Unmarshal(body, &issue); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if issue.Fields.IssueLinks == nil {
+		return []models.IssueLink{}, nil
+	}
+	return issue.Fields.IssueLinks, nil
+}

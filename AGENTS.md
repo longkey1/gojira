@@ -18,6 +18,7 @@ cmd/                 - Cobra command definitions (package cmd)
   ├── fields.go      - Fields command
   ├── merge.go       - Merge command
   ├── sprint.go      - Sprint command (Agile API board sprints)
+  ├── link.go        - Link command (issue links and link types)
   ├── version.go     - Version command
   └── util.go        - Shared utility functions (parseFields, outputJSON)
 main.go              - Application entry point (package main)
@@ -34,7 +35,7 @@ internal/
 - **API Client**: `jira.Client` handles HTTP communication with JIRA API v3, including authentication via Basic Auth (email + API token)
 - **Configuration**: Loaded via `spf13/viper` from a TOML config file and/or environment variables. Priority: env vars > config file. Values support `${VAR}` or `$VAR` expansion.
 - **Output**: All commands output JSON to stdout following JIRA API response structure
-- **Read-only Mode**: `read_only = true` (config file) or `GOJIRA_READ_ONLY=true` makes write commands (`create`, `update`, `comment add|update|delete`) fail immediately in `PersistentPreRunE`, before any JIRA API call. Write commands are marked with the `write` annotation (`writeAnnotation` in `cmd/root.go`); `isWriteCommand` walks the command's parent chain to check it. Useful when exposing the CLI to an LLM or other automation that should never write
+- **Read-only Mode**: `read_only = true` (config file) or `GOJIRA_READ_ONLY=true` makes write commands (`create`, `update`, `comment add|update|delete`, `link create`) fail immediately in `PersistentPreRunE`, before any JIRA API call. Write commands are marked with the `write` annotation (`writeAnnotation` in `cmd/root.go`); `isWriteCommand` walks the command's parent chain to check it. Useful when exposing the CLI to an LLM or other automation that should never write
 
 ### Authentication Flow
 
