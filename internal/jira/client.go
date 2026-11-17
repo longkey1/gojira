@@ -400,6 +400,62 @@ func (c *Client) CreateIssueLink(ctx context.Context, typeName, inwardKey, outwa
 	return nil
 }
 
+// GetIssueLink returns a link with both InwardIssue and OutwardIssue set,
+// unlike the entries of fields.issuelinks which only carry the other side.
+func (c *Client) GetIssueLink(ctx context.Context, linkID string) (*models.IssueLink, error) {
+	req, err := c.newRequest("GET", fmt.Sprintf("/rest/api/3/issueLink/%s", linkID))
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	body = jsonutil.SanitizeJSON(body)
+
+	var link models.IssueLink
+	if err := json.Unmarshal(body, &link); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &link, nil
+}
+
+func (c *Client) DeleteIssueLink(ctx context.Context, linkID string) error {
+	req, err := c.newRequest("DELETE", fmt.Sprintf("/rest/api/3/issueLink/%s", linkID))
+	if err != nil {
+		return err
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
 func (c *Client) ListIssueLinkTypes(ctx context.Context) ([]models.IssueLinkType, error) {
 	req, err := c.newRequest("GET", "/rest/api/3/issueLinkType")
 	if err != nil {

@@ -70,3 +70,48 @@ func TestDescribeLink(t *testing.T) {
 		})
 	}
 }
+
+func TestFindLinkID(t *testing.T) {
+	blocks, relates := testLinkTypes[0], testLinkTypes[1]
+	// Links as seen from PROJ-1's fields.issuelinks.
+	links := []models.IssueLink{
+		{ID: "1", Type: blocks, OutwardIssue: &models.Issue{Key: "PROJ-2"}}, // PROJ-1 blocks PROJ-2
+		{ID: "2", Type: blocks, InwardIssue: &models.Issue{Key: "PROJ-3"}},  // PROJ-1 is blocked by PROJ-3
+		{ID: "3", Type: relates, InwardIssue: &models.Issue{Key: "PROJ-4"}}, // stored as PROJ-4 relates to PROJ-1
+		{ID: "4", Type: relates, OutwardIssue: &models.Issue{Key: "PROJ-5"}},
+		{ID: "5", Type: relates, InwardIssue: &models.Issue{Key: "PROJ-5"}},
+	}
+
+	tests := []struct {
+		name     string
+		linkType models.IssueLinkType
+		outward  string
+		wantID   string
+		wantErr  string
+	}{
+		{name: "directional match", linkType: blocks, outward: "PROJ-2", wantID: "1"},
+		{name: "issue key is case-insensitive", linkType: blocks, outward: "proj-2", wantID: "1"},
+		{name: "directional type does not match reverse direction", linkType: blocks, outward: "PROJ-3", wantErr: "no link found: PROJ-1 blocks PROJ-3"},
+		{name: "symmetric type matches reverse direction", linkType: relates, outward: "PROJ-4", wantID: "3"},
+		{name: "type must match", linkType: relates, outward: "PROJ-2", wantErr: "no link found"},
+		{name: "multiple matches return error with ids", linkType: relates, outward: "PROJ-5", wantErr: "ids: 4, 5"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := findLinkID(links, tt.linkType, "PROJ-1", tt.outward)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("findLinkID() error = %v, want error containing %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("findLinkID() unexpected error: %v", err)
+			}
+			if got != tt.wantID {
+				t.Errorf("findLinkID() = %q, want %q", got, tt.wantID)
+			}
+		})
+	}
+}

@@ -23,7 +23,7 @@ Credentials can be supplied via a TOML config file, environment variables, or a 
 | Email | `GOJIRA_JIRA_EMAIL` | `jira_email` | Your JIRA account email |
 | API Token | `GOJIRA_JIRA_API_TOKEN` | `jira_api_token` | JIRA API token |
 | Base URL | `GOJIRA_JIRA_BASE_URL` | `jira_base_url` | JIRA instance base URL (e.g., `https://your-domain.atlassian.net`) |
-| Read Only | `GOJIRA_READ_ONLY` | `read_only` | Block write commands (`create`/`update`/`comment add\|update\|delete`/`link create`) |
+| Read Only | `GOJIRA_READ_ONLY` | `read_only` | Block write commands (`create`/`update`/`comment add\|update\|delete`/`link create\|delete`) |
 | Default Board | `GOJIRA_DEFAULT_BOARD` | `default_board` | Board ID used by `sprint list` when `--board` is omitted |
 
 To generate an API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
@@ -61,7 +61,7 @@ This is useful when managing credentials through secret managers or shared confi
 
 ### Read-only Mode
 
-Block write commands (`create`, `update`, `comment add`, `comment update`, `comment delete`, `link create`) from running, before any JIRA API call is made. Useful when exposing the CLI to an LLM or other automation that should never write:
+Block write commands (`create`, `update`, `comment add`, `comment update`, `comment delete`, `link create`, `link delete`) from running, before any JIRA API call is made. Useful when exposing the CLI to an LLM or other automation that should never write:
 
 ```bash
 # Environment variable
@@ -206,12 +206,20 @@ Manage issue links.
 
 `link create` posts `{"type":{"name":...},"inwardIssue":{"key":...},"outwardIssue":{"key":...}}` to `/rest/api/3/issueLink`. Jira reads it as "`<inward>` `<type's outward phrase>` `<outward>`", so for directional types the `--inward` issue is the subject (e.g. `--type Blocks --inward B --outward A` means "B blocks A" / "A is blocked by B"). The resulting relation is printed in the `relation` field.
 
+`link delete` sends `DELETE /rest/api/3/issueLink/{linkId}`. The link can be given by ID, or by `--type` / `--inward` / `--outward` with the same meaning as `link create`; for types whose inward and outward phrases are the same (e.g. Relates), the two issues match in either order. The deleted relation is printed in the `relation` field.
+
 ```bash
 # Relate two issues
 gojira link create --type Relates --inward PROJ-1 --outward PROJ-2
 
 # "PROJ-2 is blocked by PROJ-1"
 gojira link create --type Blocks --inward PROJ-1 --outward PROJ-2
+
+# Delete a link by its ID (the "id" in 'link list' output)
+gojira link delete 10001
+
+# Delete "PROJ-1 blocks PROJ-2" without looking up the ID (fails unless exactly one link matches)
+gojira link delete --type Blocks --inward PROJ-1 --outward PROJ-2
 
 # List links of an issue (each entry has a "relation" from the issue's point of view)
 gojira link list PROJ-123
@@ -276,7 +284,7 @@ gojira version --short
 | `--summary` | create, update | Issue summary |
 | `--description` | create, update | Issue description (ADF JSON by default, Markdown with `--markdown-description`) |
 | `--project` | create | Project key |
-| `--type` | create, link create | Issue type name for create (e.g., Task, Bug, Story); link type name for link create (e.g., Relates, Blocks) |
+| `--type` | create, link create, link delete | Issue type name for create (e.g., Task, Bug, Story); link type name for link create/delete (e.g., Relates, Blocks) |
 | `--assignee` | create, update | Assignee account ID |
 | `--labels` | create, update | Labels (comma-separated) |
 | `--priority` | create, update | Priority name |
@@ -288,8 +296,8 @@ gojira version --short
 | `--comment-id` | comment update, comment delete | Comment ID |
 | `--reply-to` | comment add | Comment ID to reply to (quotes the original comment) |
 | `--board` | sprint list | Board ID (default: `GOJIRA_DEFAULT_BOARD` / `default_board`) |
-| `--inward` | link create | Inward issue key or URL (the subject: "`<inward>` blocks `<outward>`") |
-| `--outward` | link create | Outward issue key or URL (the object: "`<outward>` is blocked by `<inward>`") |
+| `--inward` | link create, link delete | Inward issue key or URL (the subject: "`<inward>` blocks `<outward>`") |
+| `--outward` | link create, link delete | Outward issue key or URL (the object: "`<outward>` is blocked by `<inward>`") |
 | `--state` | sprint list | Sprint states (comma-separated: `future`, `active`, `closed`; default: all) |
 | `--dir` | merge | Directory to search for JSON files |
 | `--pattern` | merge | File name pattern (glob, default: *.json) |
