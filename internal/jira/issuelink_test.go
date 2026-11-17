@@ -115,3 +115,75 @@ func TestGetIssueLinks(t *testing.T) {
 		})
 	}
 }
+
+func TestGetIssueLink(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		body    string
+		wantErr string
+	}{
+		{
+			name:   "both sides are decoded",
+			status: http.StatusOK,
+			body:   `{"id":"10001","type":{"name":"Relates","inward":"relates to","outward":"relates to"},"inwardIssue":{"key":"PROJ-1"},"outwardIssue":{"key":"PROJ-2"}}`,
+		},
+		{name: "error status returns error", status: http.StatusNotFound, body: `{}`, wantErr: "request failed with status 404"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, captured := newTestServer(t, tt.status, tt.body)
+
+			link, err := client.GetIssueLink(context.Background(), "10001")
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("GetIssueLink() error = %v, want error containing %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("GetIssueLink() unexpected error: %v", err)
+			}
+			if captured.Method != "GET" || captured.Path != "/rest/api/3/issueLink/10001" {
+				t.Errorf("request = %s %s, want GET /rest/api/3/issueLink/10001", captured.Method, captured.Path)
+			}
+			if link.ID != "10001" || link.Type.Name != "Relates" || link.InwardIssue == nil || link.InwardIssue.Key != "PROJ-1" || link.OutwardIssue == nil || link.OutwardIssue.Key != "PROJ-2" {
+				t.Errorf("link = %+v, want Relates PROJ-1 -> PROJ-2", link)
+			}
+		})
+	}
+}
+
+func TestDeleteIssueLink(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		body    string
+		wantErr string
+	}{
+		{name: "success on 204", status: http.StatusNoContent},
+		{name: "success on 200", status: http.StatusOK},
+		{name: "error status returns error", status: http.StatusNotFound, body: `{"errorMessages":["No issue link with id '1' exists."]}`, wantErr: "request failed with status 404"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, captured := newTestServer(t, tt.status, tt.body)
+
+			err := client.DeleteIssueLink(context.Background(), "10001")
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("DeleteIssueLink() error = %v, want error containing %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("DeleteIssueLink() unexpected error: %v", err)
+			}
+			if captured.Method != "DELETE" || captured.Path != "/rest/api/3/issueLink/10001" {
+				t.Errorf("request = %s %s, want DELETE /rest/api/3/issueLink/10001", captured.Method, captured.Path)
+			}
+		})
+	}
+}
